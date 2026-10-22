@@ -57,6 +57,13 @@
       "when": 1791928011629,
       "tag": "0007_aviv_guest_reference_generation",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1791931611629,
+      "tag": "0008_aviv_booking_foundation",
+      "breakpoints": true
     }
   ]
 }
