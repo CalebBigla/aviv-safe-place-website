@@ -85,6 +85,30 @@ export type Database = {
           },
         ]
       }
+      booking_blocks: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          period: string
+          reason: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          period: string
+          reason?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          period?: string
+          reason?: string
+        }
+        Relationships: []
+      }
       bookings: {
         Row: {
           alternative_start: string | null
@@ -115,6 +139,7 @@ export type Database = {
           service_id: string
           service_title_snapshot: string | null
           session_status: string
+          slot: string | null
           time_zone: string
           updated_at: string
         }
@@ -147,6 +172,7 @@ export type Database = {
           service_id: string
           service_title_snapshot?: string | null
           session_status?: string
+          slot?: string | null
           time_zone?: string
           updated_at?: string
         }
@@ -179,6 +205,7 @@ export type Database = {
           service_id?: string
           service_title_snapshot?: string | null
           session_status?: string
+          slot?: string | null
           time_zone?: string
           updated_at?: string
         }
@@ -514,23 +541,52 @@ export type Database = {
         }
         Returns: undefined
       }
+      aviv_admin_block_period: {
+        Args: { _end: string; _reason: string; _start: string }
+        Returns: string
+      }
+      aviv_admin_unblock_period: { Args: { _id: string }; Returns: undefined }
       aviv_booking_metrics: { Args: never; Returns: Json }
+      aviv_consume_rate_limit: {
+        Args: { _bucket: string; _limit: number; _window_seconds: number }
+        Returns: boolean
+      }
       aviv_create_guest_request: {
         Args: {
-          _alternative: string
           _email: string
           _name: string
           _phone: string
-          _requested: string
           _service_slug: string
+          _start: string
           _token_hash: string
         }
         Returns: Json
       }
-      aviv_read_guest_booking: { Args: { _hash: string }; Returns: Json }
+      aviv_expire_stale_holds: { Args: never; Returns: number }
+      aviv_rate_limit_exceeded: {
+        Args: { _bucket: string; _limit: number; _window_seconds: number }
+        Returns: boolean
+      }
+      aviv_read_guest_booking: {
+        Args: { _client_key: string; _hash: string }
+        Returns: Json
+      }
       aviv_reorder_content: {
         Args: { _direction: number; _id: string; _kind: string }
         Returns: undefined
+      }
+      aviv_slot_availability: {
+        Args: { _from: string; _minutes: number; _to: string }
+        Returns: {
+          available: boolean
+          reason: string | null
+          slot_end: string
+          slot_start: string
+        }[]
+      }
+      aviv_slot_valid: {
+        Args: { _minutes: number; _start: string }
+        Returns: boolean
       }
       consume_contact_limit: { Args: { bucket: string }; Returns: boolean }
       has_role: {

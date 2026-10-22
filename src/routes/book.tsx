@@ -1,12 +1,13 @@
 import { contentQuery } from "@/lib/aviv/queries";
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeading } from "@/components/aviv-site";
-import { GuestBookingForm } from '@/components/aviv-guest-booking';
+import { GuestBookingForm } from "@/components/aviv-guest-booking";
 import { cmsPageHead } from "@/lib/aviv/metadata";
 export const Route = createFileRoute("/book")({
-  loader:({context})=>context.queryClient.ensureQueryData(contentQuery),
+  loader: ({ context }) => context.queryClient.ensureQueryData(contentQuery),
   head: ({ match }) =>
-    cmsPageHead(match.context.queryClient.getQueryData(contentQuery.queryKey), 
+    cmsPageHead(
+      match.context.queryClient.getQueryData(contentQuery.queryKey),
       "Book a Session",
       "Explore guest booking at AVIV Safe Place. No client account needed; appointments require AVIV confirmation.",
       "/book",
@@ -24,11 +25,12 @@ function Book() {
       <section className="site-wrap section">
         <div className="eyebrow">Choose your support</div>
         <h2 className="section-title">Find your starting point.</h2>
-        <GuestBookingForm />
-        <p className="section-copy mt-8 text-sm">
-          Online booking and payment are not open yet. No appointment or payment will be created on
-          this page.
+        <p className="section-copy mb-8 text-sm">
+          Sessions are offered on Mondays and Wednesdays from 10:00 AM to 1:00 PM, and Saturdays
+          from 10:00 AM to 3:00 PM (Lagos time). Choose a time and we'll hold it for you while
+          payment is completed. Online payment is not available yet, so no payment will be taken.
         </p>
+        <GuestBookingForm />
       </section>
     </>
   );

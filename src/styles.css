@@ -401,6 +401,73 @@ textarea {
 .form-field-wide {
   grid-column: 1/-1;
 }
+.field-error {
+  color: var(--destructive);
+  font-size: 13px;
+}
+/* Booking choices: native radio inputs presented as quiet outlined options. */
+.choice-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.choice {
+  position: relative;
+}
+.choice input {
+  position: absolute;
+  opacity: 0;
+  inset: 0;
+  margin: 0;
+}
+.choice span {
+  display: block;
+  min-width: 96px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 11px 16px;
+  text-align: center;
+  font-size: 14px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+.choice input:hover + span {
+  border-color: var(--primary);
+}
+.choice input:checked + span {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--primary-foreground);
+}
+.choice input:focus-visible + span {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+.choice input:disabled + span {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.booking-summary {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 12px 28px;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: 24px 0;
+}
+.booking-summary dt {
+  color: var(--muted-foreground);
+  font-size: 13px;
+}
+@media (max-width: 767px) {
+  .booking-summary {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+  .booking-summary dd {
+    margin-bottom: 10px;
+  }
+}
 .faq-list {
   max-width: 850px;
 }
