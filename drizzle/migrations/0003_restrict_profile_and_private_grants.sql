@@ -1,0 +1,12 @@
+REVOKE ALL ON public.profiles FROM anon,authenticated;
+GRANT SELECT ON public.profiles TO authenticated;
+GRANT UPDATE(display_name) ON public.profiles TO authenticated;
+REVOKE ALL ON public.booking_access_tokens FROM anon,authenticated;
+REVOKE ALL ON public.bookings,public.payment_events,public.audit_logs FROM anon,authenticated;
+GRANT SELECT ON public.bookings,public.payment_events,public.audit_logs TO authenticated;
+REVOKE ALL ON public.contact_submissions FROM anon,authenticated;
+GRANT SELECT ON public.contact_submissions TO authenticated;
+GRANT UPDATE(status) ON public.contact_submissions TO authenticated;
+CREATE FUNCTION public.aviv_protect_profile() RETURNS trigger LANGUAGE plpgsql SET search_path=public AS $$ BEGIN IF current_user IN ('authenticated','anon') AND (NEW.id<>OLD.id OR NEW.active<>OLD.active OR NEW.created_at<>OLD.created_at) THEN RAISE EXCEPTION 'Administrator status is protected'; END IF; NEW.updated_at=now(); RETURN NEW; END $$;
+REVOKE ALL ON FUNCTION public.aviv_protect_profile() FROM PUBLIC,anon,authenticated;
+CREATE TRIGGER aviv_profile_integrity BEFORE UPDATE ON public.profiles FOR EACH ROW EXECUTE FUNCTION public.aviv_protect_profile();

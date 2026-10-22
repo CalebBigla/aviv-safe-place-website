@@ -1,0 +1,22 @@
+
+
+## AVIV architecture
+- Preserve TanStack Start file-based routing and React Query; use shared public navigation in the root shell and independent content routes so pages remain directly accessible and shareable.
+- Use Supabase PostgreSQL/Auth/Storage for durable data; keep administrator roles in a separate table and authorise protected operations with RLS plus server-side role checks to prevent privilege escalation.
+- Use TanStack server functions for internal operations and verified server routes for provider webhooks, not Supabase Edge Functions, because this project deploys server code with the modern Start application.
+- Separate browser-safe schemas/data contracts, client-importable `*.functions.ts` actions and server-only `*.server.ts` provider helpers to prevent privileged code and secrets reaching the browser.
+- Treat guest links as revocable bearer capabilities backed by hashed expiring tokens, separate from administrator Auth, so clients need no accounts and private rows are never public.
+- Use the configured transactional email provider with fixed feature-specific templates and provider idempotency keys; avoid introducing email queues, suppression tables or unsubscribe infrastructure unless the selected provider requires them.
+- Keep public content access in `src/lib/aviv` with explicit safe projections and SSR publishable-key reads; an empty catalogue must remain an honest empty state until approved content is supplied.
+- Store editable editorial pages and contact values in existing Supabase content tables; render contact fields through one shared validator so placeholder and unsafe URLs never become active channels.
+- Explicitly revoke function grants from both anon and authenticated when a security-definer function is server-only, because revoking PUBLIC alone does not remove hosted default role grants.
+- Reuse pages, public_settings and services for the CMS; keep structured home copy and SEO in pages, with allowlisted public setting keys so secrets never enter public content.
+- Administrator routes live under the Supabase authenticated gate and an admin-authorised loader; every action independently revalidates identity and active role, while payments and tokens have no browser write grants.
+- Keep CMS uploads in private aviv-media Storage with published-asset read policies and short-lived signed image URLs; accept only validated JPEG, PNG and WebP files up to 5 MB.
+- Route booking search/filter/pagination state through URL search parameters and fetch detail records independently, so older bookings are not hidden by the overview limit.
+- Apply appointment actions through a role-checked transactional database function with optimistic timestamps and a shared scheduling lock, so concurrent admins cannot confirm overlapping appointments in the current single-calendar model.
+- Revoke session tokens and clear meeting readiness when appointment times change; record only state/time deltas in appointment audit entries to avoid logging counselling content or access credentials.
+- Derive operational overview counts across all booking records server-side; refund review is administrative only and never asserts that funds were refunded.
+- Separate provider-ready preparation from real-service acceptance; keep checkout fail-closed and retain no public booking submissions until secure payment initiation is connected, so missing providers cannot create stranded client requests.
+- Create guest request snapshots and hashed access capabilities atomically through service-only database functions; guest readback projects only appointment/payment status, not client identity or provider credentials.
+- Keep brand-mask rendering and public-page motion/support exploration in a browser-safe experience module; motion is nonblocking, pausable and disabled for reduced-motion preferences.
