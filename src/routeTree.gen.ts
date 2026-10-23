@@ -18,11 +18,14 @@ import { Route as CancellationPolicyRouteImport } from './routes/cancellation-po
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as ServicesRouteImport } from './routes/services'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as AuthenticatedAdminRouteRouteImport } from './routes/_authenticated/admin/route'
 import { Route as AdminLoginRouteImport } from './routes/admin.login'
 import { Route as BookingSuccessRouteImport } from './routes/booking.success'
+import { Route as MediaIdRouteImport } from './routes/media.$id'
 import { Route as SessionTokenRouteImport } from './routes/session.$token'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin/index'
 import { Route as AuthenticatedAdminAvailabilityRouteImport } from './routes/_authenticated/admin/availability'
@@ -79,9 +82,19 @@ const ResetPasswordRoute = ResetPasswordRouteImport.update({
   path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
+  id: '/robots.txt',
+  path: '/robots.txt',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ServicesRoute = ServicesRouteImport.update({
   id: '/services',
   path: '/services',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TermsRoute = TermsRouteImport.update({
@@ -102,6 +115,11 @@ const AdminLoginRoute = AdminLoginRouteImport.update({
 const BookingSuccessRoute = BookingSuccessRouteImport.update({
   id: '/booking/success',
   path: '/booking/success',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MediaIdRoute = MediaIdRouteImport.update({
+  id: '/media/$id',
+  path: '/media/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SessionTokenRoute = SessionTokenRouteImport.update({
@@ -175,11 +193,14 @@ export interface FileRoutesByFullPath {
   '/contact': typeof ContactRoute
   '/privacy': typeof PrivacyRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/robots.txt': typeof RobotsDottxtRoute
   '/services': typeof ServicesRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
   '/admin': typeof AuthenticatedAdminRouteRouteWithChildren
   '/admin/login': typeof AdminLoginRoute
   '/booking/success': typeof BookingSuccessRoute
+  '/media/$id': typeof MediaIdRoute
   '/session/$token': typeof SessionTokenRoute
   '/admin/availability': typeof AuthenticatedAdminAvailabilityRoute
   '/admin/bookings': typeof AuthenticatedAdminBookingsRouteWithChildren
@@ -201,10 +222,13 @@ export interface FileRoutesByTo {
   '/contact': typeof ContactRoute
   '/privacy': typeof PrivacyRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/robots.txt': typeof RobotsDottxtRoute
   '/services': typeof ServicesRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
   '/admin/login': typeof AdminLoginRoute
   '/booking/success': typeof BookingSuccessRoute
+  '/media/$id': typeof MediaIdRoute
   '/session/$token': typeof SessionTokenRoute
   '/admin/availability': typeof AuthenticatedAdminAvailabilityRoute
   '/admin/media': typeof AuthenticatedAdminMediaRoute
@@ -227,11 +251,14 @@ export interface FileRoutesById {
   '/contact': typeof ContactRoute
   '/privacy': typeof PrivacyRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/robots.txt': typeof RobotsDottxtRoute
   '/services': typeof ServicesRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteRouteWithChildren
   '/admin/login': typeof AdminLoginRoute
   '/booking/success': typeof BookingSuccessRoute
+  '/media/$id': typeof MediaIdRoute
   '/session/$token': typeof SessionTokenRoute
   '/_authenticated/admin/availability': typeof AuthenticatedAdminAvailabilityRoute
   '/_authenticated/admin/bookings': typeof AuthenticatedAdminBookingsRouteWithChildren
@@ -255,11 +282,14 @@ export interface FileRouteTypes {
     | '/contact'
     | '/privacy'
     | '/reset-password'
+    | '/robots.txt'
     | '/services'
+    | '/sitemap.xml'
     | '/terms'
     | '/admin'
     | '/admin/login'
     | '/booking/success'
+    | '/media/$id'
     | '/session/$token'
     | '/admin/availability'
     | '/admin/bookings'
@@ -281,10 +311,13 @@ export interface FileRouteTypes {
     | '/contact'
     | '/privacy'
     | '/reset-password'
+    | '/robots.txt'
     | '/services'
+    | '/sitemap.xml'
     | '/terms'
     | '/admin/login'
     | '/booking/success'
+    | '/media/$id'
     | '/session/$token'
     | '/admin/availability'
     | '/admin/media'
@@ -306,11 +339,14 @@ export interface FileRouteTypes {
     | '/contact'
     | '/privacy'
     | '/reset-password'
+    | '/robots.txt'
     | '/services'
+    | '/sitemap.xml'
     | '/terms'
     | '/_authenticated/admin'
     | '/admin/login'
     | '/booking/success'
+    | '/media/$id'
     | '/session/$token'
     | '/_authenticated/admin/availability'
     | '/_authenticated/admin/bookings'
@@ -334,10 +370,13 @@ export interface RootRouteChildren {
   ContactRoute: typeof ContactRoute
   PrivacyRoute: typeof PrivacyRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  RobotsDottxtRoute: typeof RobotsDottxtRoute
   ServicesRoute: typeof ServicesRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TermsRoute: typeof TermsRoute
   AdminLoginRoute: typeof AdminLoginRoute
   BookingSuccessRoute: typeof BookingSuccessRoute
+  MediaIdRoute: typeof MediaIdRoute
   SessionTokenRoute: typeof SessionTokenRoute
   BookingManageTokenRoute: typeof BookingManageTokenRoute
 }
@@ -407,11 +446,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/robots.txt': {
+      id: '/robots.txt'
+      path: '/robots.txt'
+      fullPath: '/robots.txt'
+      preLoaderRoute: typeof RobotsDottxtRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/services': {
       id: '/services'
       path: '/services'
       fullPath: '/services'
       preLoaderRoute: typeof ServicesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/terms': {
@@ -440,6 +493,13 @@ declare module '@tanstack/react-router' {
       path: '/booking/success'
       fullPath: '/booking/success'
       preLoaderRoute: typeof BookingSuccessRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/media/$id': {
+      id: '/media/$id'
+      path: '/media/$id'
+      fullPath: '/media/$id'
+      preLoaderRoute: typeof MediaIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/session/$token': {
@@ -586,10 +646,13 @@ const rootRouteChildren: RootRouteChildren = {
   ContactRoute: ContactRoute,
   PrivacyRoute: PrivacyRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  RobotsDottxtRoute: RobotsDottxtRoute,
   ServicesRoute: ServicesRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
   TermsRoute: TermsRoute,
   AdminLoginRoute: AdminLoginRoute,
   BookingSuccessRoute: BookingSuccessRoute,
+  MediaIdRoute: MediaIdRoute,
   SessionTokenRoute: SessionTokenRoute,
   BookingManageTokenRoute: BookingManageTokenRoute,
 }

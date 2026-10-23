@@ -4,7 +4,8 @@ import { PageHeading, EditorialContent } from "@/components/aviv-site";
 import { cmsPageHead } from "@/lib/aviv/metadata";
 export const Route = createFileRoute("/cancellation-policy")({
   head: ({ match }) =>
-    cmsPageHead(match.context.queryClient.getQueryData(contentQuery.queryKey), 
+    cmsPageHead(
+      match.context.queryClient.getQueryData(contentQuery.queryKey),
       "Cancellation & Refund Policy",
       "Cancellation and refund information for AVIV appointments.",
       "/cancellation-policy",

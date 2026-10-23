@@ -104,7 +104,7 @@ function Contact() {
                   {...register(f.key)}
                 />
                 {errors[f.key] && (
-                  <span id={`${f.key}-error`} className="text-destructive">
+                  <span id={`${f.key}-error`} className="field-error">
                     {errors[f.key]?.message}
                   </span>
                 )}
@@ -117,9 +117,14 @@ function Contact() {
                 rows={6}
                 maxLength={2000}
                 aria-invalid={!!errors.message}
+                aria-describedby={errors.message ? "message-error" : undefined}
                 {...register("message")}
               />
-              {errors.message && <span className="text-destructive">{errors.message.message}</span>}
+              {errors.message && (
+                <span id="message-error" className="field-error">
+                  {errors.message.message}
+                </span>
+              )}
             </div>
             <div className="hidden" aria-hidden="true">
               <label htmlFor="website">Website</label>

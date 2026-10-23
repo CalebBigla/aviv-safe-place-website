@@ -74,7 +74,11 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
 }
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
-  loader: ({ context }) => context.queryClient.ensureQueryData(contentQuery),
+  // Administration does not render public content, so it does not depend on it.
+  loader: ({ context, location }) =>
+    location.pathname.startsWith("/admin")
+      ? undefined
+      : context.queryClient.ensureQueryData(contentQuery),
   head: () => ({
     meta: [
       { charSet: "utf-8" },

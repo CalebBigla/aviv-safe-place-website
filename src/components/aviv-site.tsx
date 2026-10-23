@@ -11,7 +11,8 @@ import {
   SheetDescription,
 } from "@/components/ui/sheet";
 import { contentQuery } from "@/lib/aviv/queries";
-import { BrandMark } from './aviv-experience';
+import { BrandMark } from "./aviv-experience";
+import { formatNaira } from "@/lib/aviv/format";
 
 export function Wordmark() {
   return (
@@ -95,7 +96,9 @@ export function Footer() {
       <div className="footer-main">
         <div>
           <Wordmark />
-          <p className="mt-6 text-muted-foreground">{data.settings['footer_text'] || 'Heart Healed, Family Restored.'}</p>
+          <p className="mt-6 text-muted-foreground">
+            {data.settings["footer_text"] || "Heart Healed, Family Restored."}
+          </p>
         </div>
         <nav aria-label="Footer navigation" className="footer-links">
           <span className="eyebrow mb-2">Explore</span>
@@ -115,12 +118,13 @@ export function Footer() {
         </div>
       </div>
       <div className="footer-bottom">
-        <span>© {new Date().getFullYear()} AVIV Safe Place</span>
+        <span>
+          © {new Date().getFullYear()} {data.settings["business_name"] || "AVIV Safe Place"}
+        </span>
         <div className="flex flex-wrap gap-5">
           <Link to="/privacy">Privacy Policy</Link>
           <Link to="/terms">Terms</Link>
           <Link to="/cancellation-policy">Cancellation & Refunds</Link>
-          <Link to="/admin">Administration</Link>
         </div>
       </div>
     </footer>
@@ -140,7 +144,8 @@ export function ContactDetails({ settings }: { settings: Record<string, string> 
       {fields.map(({ key, label, kind }) => {
         const value = settings[key];
         if (!value) return null;
-        const placeholder = value.startsWith("[") || /@(?:[^@]*\.)?example\.(com|org|net)$/i.test(value);
+        const placeholder =
+          value.startsWith("[") || /@(?:[^@]*\.)?example\.(com|org|net)$/i.test(value);
         const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
         const phoneValid = /^\+?[\d\s()-]{7,25}$/.test(value);
         let socialUrl: string | undefined;
@@ -148,17 +153,36 @@ export function ContactDetails({ settings }: { settings: Record<string, string> 
           try {
             const url = new URL(value);
             if (url.protocol === "https:") socialUrl = url.href;
-          } catch { /* Invalid settings stay plain text. */ }
+          } catch {
+            /* Invalid settings stay plain text. */
+          }
         }
-        const href = placeholder ? undefined : kind === "email" && emailValid
-          ? `mailto:${encodeURIComponent(value)}`
-          : kind === "phone" && phoneValid ? `tel:${value.replace(/[\s()-]/g, "")}` : socialUrl;
+        const href = placeholder
+          ? undefined
+          : kind === "email" && emailValid
+            ? `mailto:${encodeURIComponent(value)}`
+            : kind === "phone" && phoneValid
+              ? `tel:${value.replace(/[\s()-]/g, "")}`
+              : socialUrl;
         return (
           <div key={key}>
             <dt className="text-muted-foreground text-xs mb-1">
-              {label}{placeholder ? " · Placeholder — not active" : ""}
+              {label}
+              {placeholder ? " · Placeholder — not active" : ""}
             </dt>
-            <dd>{href ? <a href={href} target={socialUrl ? "_blank" : undefined} rel={socialUrl ? "noopener noreferrer" : undefined}>{kind === "social" ? label : value}</a> : value}</dd>
+            <dd>
+              {href ? (
+                <a
+                  href={href}
+                  target={socialUrl ? "_blank" : undefined}
+                  rel={socialUrl ? "noopener noreferrer" : undefined}
+                >
+                  {kind === "social" ? label : value}
+                </a>
+              ) : (
+                value
+              )}
+            </dd>
           </div>
         );
       })}
@@ -166,15 +190,21 @@ export function ContactDetails({ settings }: { settings: Record<string, string> 
   );
 }
 export function CTA() {
-  const {data}=useSuspenseQuery(contentQuery);
-  const content=data.pages.find(p=>p.slug==='home')?.content;
-  const home=content && typeof content==='object' && !Array.isArray(content)?content:{};
+  const { data } = useSuspenseQuery(contentQuery);
+  const content = data.pages.find((p) => p.slug === "home")?.content;
+  const home = content && typeof content === "object" && !Array.isArray(content) ? content : {};
   return (
     <section className="cta-band">
       <div className="site-wrap cta-inner">
         <div>
-          <h2>{typeof home['cta_title']==='string' && home['cta_title'] || 'A gentle step towards a new beginning.'}</h2>
-          <p className="opacity-80">{typeof home['cta_description']==='string' && home['cta_description'] || 'You don’t have to navigate it all alone.'}</p>
+          <h2>
+            {(typeof home["cta_title"] === "string" && home["cta_title"]) ||
+              "A gentle step towards a new beginning."}
+          </h2>
+          <p className="opacity-80">
+            {(typeof home["cta_description"] === "string" && home["cta_description"]) ||
+              "You don’t have to navigate it all alone."}
+          </p>
         </div>
         <Button variant="hero" size="lg" className="h-12" asChild>
           <Link to="/book">
@@ -202,7 +232,9 @@ export function PageHeading({
     </div>
   );
 }
-export function ServicesList() {
+// headingLevel follows the surrounding section: h3 under a section heading, h2 directly under the page h1.
+export function ServicesList({ headingLevel = "h3" }: { headingLevel?: "h2" | "h3" }) {
+  const Heading = headingLevel;
   const { data } = useSuspenseQuery(contentQuery);
   if (!data.services.length)
     return (
@@ -215,22 +247,21 @@ export function ServicesList() {
     <div className="service-list">
       {data.services.map((s, i) => (
         <article className="service-item" key={s.slug} id={s.slug}>
-          <span className="text-xs text-muted-foreground">0{i + 1}</span>
-          <h3>{s.title}</h3>
+          <span className="text-xs text-muted-foreground" aria-hidden="true">
+            {String(i + 1).padStart(2, "0")}
+          </span>
+          <Heading>{s.title}</Heading>
           <p className="section-copy text-sm">{s.description}</p>
-          {s.full_description && <details className="mt-4"><summary>More about this service</summary><p className="section-copy text-sm whitespace-pre-wrap mt-3">{s.full_description}</p></details>}
+          {s.full_description && (
+            <details className="mt-4">
+              <summary>More about this service</summary>
+              <p className="section-copy text-sm whitespace-pre-wrap mt-3">{s.full_description}</p>
+            </details>
+          )}
           {s.audience && <p className="mt-4 text-sm">For {s.audience}</p>}
           <div className="flex flex-wrap gap-4 my-5 text-sm">
             {s.duration_minutes && <span>{s.duration_minutes} minutes</span>}
-            {s.price_minor !== null && (
-              <span>
-                {new Intl.NumberFormat("en-NG", {
-                  style: "currency",
-                  currency: "NGN",
-                  maximumFractionDigits: 0,
-                }).format(s.price_minor / 100)}
-              </span>
-            )}
+            {s.price_minor !== null && <span>{formatNaira(s.price_minor)}</span>}
             {s.delivery_format && <span>{s.delivery_format}</span>}
           </div>
           <Button asChild variant="outline">
@@ -293,7 +324,23 @@ export function EditorialContent({ slug }: { slug: string }) {
   const { data } = useSuspenseQuery(contentQuery);
   const page = data.pages.find((p) => p.slug === slug);
   return page ? (
-    <div className={['privacy','terms','cancellation-policy'].includes(slug) ? 'policy-content' : 'prose-text'}>{['privacy','terms','cancellation-policy'].includes(slug) ? page.body.split(/\n\s*\n/).map((block, index) => /^\d+[.)]\s/.test(block.trim()) && !block.includes('\n') ? <h2 key={index} id={`policy-section-${index}`}>{block}</h2> : <p key={index}>{block}</p>) : page.body}</div>
+    <div
+      className={
+        ["privacy", "terms", "cancellation-policy"].includes(slug) ? "policy-content" : "prose-text"
+      }
+    >
+      {["privacy", "terms", "cancellation-policy"].includes(slug)
+        ? page.body.split(/\n\s*\n/).map((block, index) =>
+            /^\d+[.)]\s/.test(block.trim()) && !block.includes("\n") ? (
+              <h2 key={index} id={`policy-section-${index}`}>
+                {block}
+              </h2>
+            ) : (
+              <p key={index}>{block}</p>
+            ),
+          )
+        : page.body}
+    </div>
   ) : (
     <p className="section-copy">Further information will be shared once approved and published.</p>
   );

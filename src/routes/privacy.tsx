@@ -3,7 +3,13 @@ import { createFileRoute } from "@tanstack/react-router";
 import { PageHeading, EditorialContent } from "@/components/aviv-site";
 import { cmsPageHead } from "@/lib/aviv/metadata";
 export const Route = createFileRoute("/privacy")({
-  head: ({ match }) => cmsPageHead(match.context.queryClient.getQueryData(contentQuery.queryKey), "Privacy Policy", "How AVIV handles your information.", "/privacy"),
+  head: ({ match }) =>
+    cmsPageHead(
+      match.context.queryClient.getQueryData(contentQuery.queryKey),
+      "Privacy Policy",
+      "How AVIV handles your information.",
+      "/privacy",
+    ),
   component: Policy,
 });
 function Policy() {

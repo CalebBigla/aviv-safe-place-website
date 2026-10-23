@@ -3,9 +3,9 @@ import { Link } from "@tanstack/react-router";
 import { ArrowUpRight, Heart, Users, Sprout } from "lucide-react";
 import { Button } from "@/components/ui/button";
 const logo = "/favicon.png";
-import connection from "@/assets/aviv-connection-scene.jpg";
-import conversation from "@/assets/aviv-connection-scene.jpg";
 import family from "@/assets/aviv-connection-scene.jpg";
+import room from "@/assets/aviv-sanctuary.jpg";
+import welcome from "@/assets/aviv-welcome-scene.jpg";
 
 export function BrandMark({
   variant = "teal",
@@ -57,8 +57,8 @@ const paths = [
     Icon: Heart,
     heading: "Room for your story.",
     body: "A compassionate space to be heard, reflect and take your next step at your own pace.",
-    image: conversation,
-    alt: "A thoughtful counselling conversation",
+    image: room,
+    alt: "A welcoming counselling room with comfortable chairs and sunlight.",
   },
   {
     title: "For your family",
@@ -66,15 +66,15 @@ const paths = [
     heading: "Connection begins with care.",
     body: "Make space for the relationships that matter, with understanding, communication and hope.",
     image: family,
-    alt: "A family sharing a joyful moment",
+    alt: "A mother and daughter sharing a warm conversation.",
   },
   {
     title: "For your next chapter",
     Icon: Sprout,
     heading: "A gentle beginning, together.",
     body: "Restoration is a journey. Start with a conversation about the support you are looking for.",
-    image: connection,
-    alt: "Illustrative mother and daughter sharing a warm conversation",
+    image: welcome,
+    alt: "A sunlit room with comfortable chairs overlooking a garden.",
   },
 ] as const;
 

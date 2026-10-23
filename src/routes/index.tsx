@@ -3,7 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { ArrowUpRight, ArrowDown, Pause, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CTA, ServicesList, FAQs, Values } from "@/components/aviv-site";
-import { cmsPageHead } from "@/lib/aviv/metadata";
+import { cmsPageHead, siteOrigin } from "@/lib/aviv/metadata";
 import sanctuary from "@/assets/aviv-welcome-scene.jpg";
 import { BrandMark, SupportExplorer } from "@/components/aviv-experience";
 import { useState } from "react";
@@ -11,13 +11,34 @@ import conversationPhoto from "@/assets/aviv-connection-scene.jpg";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { contentQuery } from "@/lib/aviv/queries";
 export const Route = createFileRoute("/")({
-  head: ({ match }) =>
-    cmsPageHead(
-      match.context.queryClient.getQueryData(contentQuery.queryKey),
+  head: ({ match }) => {
+    const data = match.context.queryClient.getQueryData(contentQuery.queryKey);
+    const head = cmsPageHead(
+      data,
       "Compassionate counselling",
       "AVIV Safe Place. Heart Healed, Family Restored. A compassionate space for emotional safety, hope and connection.",
       "/",
-    ),
+    );
+    if (!siteOrigin) return head;
+    // Only facts the site already publishes; "<" is escaped so CMS text cannot close the script.
+    const organisation = {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      name: data?.settings["business_name"] || "AVIV Safe Place",
+      slogan: "Heart Healed, Family Restored.",
+      url: siteOrigin,
+      logo: `${siteOrigin}/favicon.png`,
+    };
+    return {
+      ...head,
+      scripts: [
+        {
+          type: "application/ld+json",
+          children: JSON.stringify(organisation).replace(/</g, "\\u003c"),
+        },
+      ],
+    };
+  },
   component: Index,
 });
 function Index() {
@@ -190,7 +211,7 @@ function Index() {
             <h2 className="section-title mb-0">Questions on your mind?</h2>
           </div>
           <Button variant="link" asChild>
-            <Link to="/services">
+            <Link to="/services" hash="faqs">
               All questions <ArrowUpRight />
             </Link>
           </Button>

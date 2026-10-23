@@ -31,10 +31,10 @@ function Services() {
           loading="lazy"
         />
         <div className="services-directory">
-          <ServicesList />
+          <ServicesList headingLevel="h2" />
         </div>
       </section>
-      <section className="site-wrap section pt-0">
+      <section id="faqs" className="site-wrap section pt-0">
         <div className="eyebrow">Your questions</div>
         <h2 className="section-title">A little clarity before you begin.</h2>
         <FAQs />
