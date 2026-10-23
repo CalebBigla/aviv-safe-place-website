@@ -1,3 +1,5 @@
+> **Superseded (October 2026).** This analysis predates the booking foundation phase and is kept for history only. Several points are outdated or incorrect: CMS text is rendered as React text nodes (no HTML), so the reported EditorialContent XSS risk does not exist; the schedule, 30-minute grid, holds and rate limiting are now implemented and tested. See README.md.
+
 # AVIV Safe Place - Pre-Integration Test Phase Analysis
 
 Based on code inspection of the AVIV Safe Place website, this document provides analysis and guidance for the pre-integration test phase as outlined in the requirements. Since live testing cannot be performed due to environment constraints, this analysis focuses on:

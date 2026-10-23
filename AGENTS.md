@@ -17,6 +17,12 @@
 - Apply appointment actions through a role-checked transactional database function with optimistic timestamps and a shared scheduling lock, so concurrent admins cannot confirm overlapping appointments in the current single-calendar model.
 - Revoke session tokens and clear meeting readiness when appointment times change; record only state/time deltas in appointment audit entries to avoid logging counselling content or access credentials.
 - Derive operational overview counts across all booking records server-side; refund review is administrative only and never asserts that funds were refunded.
-- Separate provider-ready preparation from real-service acceptance; keep checkout fail-closed and retain no public booking submissions until secure payment initiation is connected, so missing providers cannot create stranded client requests.
+- Separate provider-ready preparation from real-service acceptance; a guest booking is only a 30-minute unpaid hold until the server verifies payment with the provider, and unpaid holds never enter the administration queue, so missing providers cannot create stranded client requests.
+- Treat the database as the scheduling authority: Mon/Wed 10:00-13:00 and Sat 10:00-15:00 Africa/Lagos, starts on a 30-minute grid up to one hour before closing, 30- or 60-minute sessions only; src/lib/aviv/schedule.ts mirrors public.aviv_slot_valid for display and must stay in step with it.
+- Claim time only through bookings.slot, whose exclusion constraint forbids overlap; expire lapsed holds inside the scheduling transaction under advisory lock 7312403 rather than relying on a scheduled job.
+- Use booking snapshots (price, title, duration) for every historical calculation, never the mutable service row.
+- Key public rate limits on hashed client identifiers with bounded, self-pruning buckets; never key them on bearer tokens or store raw IPs.
+- Serve published CMS images through the /media/:id route so public pages and social previews never depend on expiring signed URLs.
+- Keep the schema in hand-written SQL migrations applied with drizzle-kit migrate, verified by the local database tests in src/test/db; drizzle-kit push is refused because drizzle/schema.ts is intentionally empty.
 - Create guest request snapshots and hashed access capabilities atomically through service-only database functions; guest readback projects only appointment/payment status, not client identity or provider credentials.
 - Keep brand-mask rendering and public-page motion/support exploration in a browser-safe experience module; motion is nonblocking, pausable and disabled for reduced-motion preferences.
