@@ -7,6 +7,26 @@ const slug = z
   .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Use lowercase words separated by hyphens.")
   .max(100);
 const id = z.string().uuid().optional();
+export const settingKeys = [
+  "business_name",
+  "contact_email",
+  "contact_phone",
+  "contact_address",
+  "social_instagram",
+  "social_facebook",
+  "social_linkedin",
+  "footer_text",
+] as const;
+export const settingLabels: Record<(typeof settingKeys)[number], string> = {
+  business_name: "Business name (footer and search results)",
+  contact_email: "Contact email",
+  contact_phone: "Contact phone",
+  contact_address: "Address",
+  social_instagram: "Instagram link (https://)",
+  social_facebook: "Facebook link (https://)",
+  social_linkedin: "LinkedIn link (https://)",
+  footer_text: "Footer message",
+};
 export const cmsSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("services"),
@@ -16,7 +36,10 @@ export const cmsSchema = z.discriminatedUnion("kind", [
     description: text,
     full_description: text,
     audience: text,
-    duration_minutes: z.number().int().positive().max(480),
+    // Bookable sessions are 30 or 60 minutes (also enforced by the database).
+    duration_minutes: z.union([z.literal(30), z.literal(60)], {
+      errorMap: () => ({ message: "Sessions are 30 or 60 minutes." }),
+    }),
     price_minor: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
     currency: z.literal("NGN"),
     delivery_format: text,
@@ -55,16 +78,7 @@ export const cmsSchema = z.discriminatedUnion("kind", [
   }),
   z.object({
     kind: z.literal("public_settings"),
-    key: z.enum([
-      "business_name",
-      "contact_email",
-      "contact_phone",
-      "contact_address",
-      "social_instagram",
-      "social_facebook",
-      "social_linkedin",
-      "footer_text",
-    ]),
+    key: z.enum(settingKeys),
     value: z.string().max(2000),
     published: z.boolean(),
   }),
@@ -77,16 +91,20 @@ export const cmsSchema = z.discriminatedUnion("kind", [
   }),
 ]);
 export type CmsInput = z.infer<typeof cmsSchema>;
-export const homeFields = [
-  "hero_eyebrow",
-  "hero_title",
-  "hero_description",
-  "intro_title",
-  "intro_body",
-  "intro_supporting",
-  "values_title",
-  "approach_title",
-  "approach_description",
-  "cta_title",
-  "cta_description",
-] as const;
+// Editable home page copy (pages.content for slug "home") and what each controls.
+export const homeFields = {
+  hero_eyebrow: "Hero: short line above the heading",
+  hero_description: "Hero: introduction paragraph",
+  intro_title: "Welcome: heading",
+  intro_body: "Welcome: first paragraph",
+  intro_supporting: "Welcome: second paragraph",
+  values_title: "Values: heading",
+  approach_title: "Booking steps: heading",
+  approach_description: "Booking steps: introduction",
+  cta_title: "Closing invitation: heading (shown on several pages)",
+  cta_description: "Closing invitation: text",
+} as const;
+export type HomeField = keyof typeof homeFields;
+
+// Pages whose body text is shown publicly. Other pages use only their SEO fields.
+export const pagesWithBody = ["about", "privacy", "terms", "cancellation-policy"] as const;

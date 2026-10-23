@@ -1,23 +1,13 @@
 import { createServerFn } from "@tanstack/react-start";
-import { getRequest } from "@tanstack/react-start/server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "@/integrations/supabase/types";
 import { cmsSchema } from "./admin-schema";
+import { requireAdmin } from "./admin-auth.server";
 import { z } from "zod";
 
-async function authorise(client: SupabaseClient<Database>, userId: string) {
-  const token = getRequest().headers.get("authorization")?.slice(7);
-  const user = await client.auth.getUser(token);
-  if (user.error || user.data.user?.id !== userId) throw new Error("Please sign in again.");
-  const role = await client.rpc("has_role", { _user_id: userId, _role: "admin" });
-  if (role.error || !role.data)
-    throw new Error("Administrator access has not been authorised for this account.");
-}
 export const getAdminIdentity = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    await authorise(context.supabase, context.userId);
+    await requireAdmin(context.supabase, context.userId);
     const { data } = await context.supabase
       .from("profiles")
       .select("display_name")
@@ -28,36 +18,26 @@ export const getAdminIdentity = createServerFn({ method: "POST" })
 export const getAdminContent = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    await authorise(context.supabase, context.userId);
-    const [services, pages, faqs, settings, media, bookings, contacts, audit, metrics] =
-      await Promise.all([
-        context.supabase.from("services").select("*").order("sort_order"),
-        context.supabase.from("pages").select("*").order("slug"),
-        context.supabase.from("faqs").select("*").order("sort_order"),
-        context.supabase.from("public_settings").select("*").order("key"),
-        context.supabase.from("media_assets").select("*").order("created_at", { ascending: false }),
-        context.supabase
-          .from("bookings")
-          .select("*")
-          .order("created_at", { ascending: false })
-          .limit(200),
-        context.supabase
-          .from("contact_submissions")
-          .select("*")
-          .order("created_at", { ascending: false })
-          .limit(200),
-        context.supabase
-          .from("audit_logs")
-          .select("id,action,resource_type,resource_id,created_at")
-          .order("created_at", { ascending: false })
-          .limit(50),
-        context.supabase.rpc("aviv_booking_metrics"),
-      ]);
-    if (
-      [services, pages, faqs, settings, media, bookings, contacts, audit, metrics].some(
-        (r) => r.error,
-      )
-    )
+    await requireAdmin(context.supabase, context.userId);
+    const [services, pages, faqs, settings, media, contacts, audit, metrics] = await Promise.all([
+      context.supabase.from("services").select("*").order("sort_order"),
+      context.supabase.from("pages").select("*").order("slug"),
+      context.supabase.from("faqs").select("*").order("sort_order"),
+      context.supabase.from("public_settings").select("*").order("key"),
+      context.supabase.from("media_assets").select("*").order("created_at", { ascending: false }),
+      context.supabase
+        .from("contact_submissions")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(200),
+      context.supabase
+        .from("audit_logs")
+        .select("id,action,resource_type,resource_id,created_at")
+        .order("created_at", { ascending: false })
+        .limit(50),
+      context.supabase.rpc("aviv_booking_metrics"),
+    ]);
+    if ([services, pages, faqs, settings, media, contacts, audit, metrics].some((r) => r.error))
       throw new Error("Administration could not be loaded.");
     const mediaWithUrls = await Promise.all(
       (media.data ?? []).map(async (m) => ({
@@ -77,7 +57,6 @@ export const getAdminContent = createServerFn({ method: "POST" })
       faqs: faqs.data ?? [],
       settings: settings.data ?? [],
       media: mediaWithUrls,
-      bookings: bookings.data ?? [],
       contacts: contacts.data ?? [],
       audit: audit.data ?? [],
       metrics: {
@@ -94,7 +73,7 @@ export const saveCms = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => cmsSchema.parse(input))
   .handler(async ({ data, context }) => {
-    await authorise(context.supabase, context.userId);
+    await requireAdmin(context.supabase, context.userId);
     const { kind, ...values } = data;
     let error;
     if (kind === "services" && "title" in values && "price_minor" in values)
@@ -130,7 +109,7 @@ export const reorderCms = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    await authorise(context.supabase, context.userId);
+    await requireAdmin(context.supabase, context.userId);
     const result = await context.supabase.rpc("aviv_reorder_content", {
       _kind: data.kind,
       _id: data.id,
@@ -151,7 +130,7 @@ export const uploadMedia = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    await authorise(context.supabase, context.userId);
+    await requireAdmin(context.supabase, context.userId);
     let binary: Uint8Array;
     try {
       binary = Uint8Array.from(atob(data.file), (c) => c.charCodeAt(0));
@@ -176,14 +155,12 @@ export const uploadMedia = createServerFn({ method: "POST" })
       .from("aviv-media")
       .upload(path, binary, { contentType: data.mime });
     if (upload.error) throw new Error("Image could not be uploaded.");
-    const row = await context.supabase
-      .from("media_assets")
-      .insert({
-        storage_path: path,
-        alt_text: data.alt,
-        mime_type: data.mime,
-        file_size: binary.length,
-      });
+    const row = await context.supabase.from("media_assets").insert({
+      storage_path: path,
+      alt_text: data.alt,
+      mime_type: data.mime,
+      file_size: binary.length,
+    });
     if (row.error) {
       await context.supabase.storage.from("aviv-media").remove([path]);
       throw new Error("Image could not be saved.");
@@ -196,7 +173,7 @@ export const updateContactStatus = createServerFn({ method: "POST" })
     z.object({ id: z.string().uuid(), status: z.enum(["new", "read", "closed"]) }).parse(input),
   )
   .handler(async ({ data, context }) => {
-    await authorise(context.supabase, context.userId);
+    await requireAdmin(context.supabase, context.userId);
     const result = await context.supabase
       .from("contact_submissions")
       .update({ status: data.status })
@@ -210,11 +187,66 @@ export const saveAdminName = createServerFn({ method: "POST" })
     z.object({ name: z.string().trim().min(1).max(100) }).parse(input),
   )
   .handler(async ({ data, context }) => {
-    await authorise(context.supabase, context.userId);
+    await requireAdmin(context.supabase, context.userId);
     const result = await context.supabase
       .from("profiles")
       .update({ display_name: data.name })
       .eq("id", context.userId);
     if (result.error) throw new Error("Could not save name.");
+    return { saved: true };
+  });
+// Deletion is offered only where it cannot damage history. Services referenced by bookings
+// are protected by a foreign key; administrators deactivate or unpublish them instead.
+export const deleteCms = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .discriminatedUnion("kind", [
+        z.object({
+          kind: z.enum(["services", "pages", "faqs", "media_assets"]),
+          id: z.string().uuid(),
+        }),
+        z.object({ kind: z.literal("public_settings"), key: z.string().min(1).max(100) }),
+      ])
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    await requireAdmin(context.supabase, context.userId);
+    const db = context.supabase;
+    if (data.kind === "public_settings") {
+      const result = await db.from("public_settings").delete().eq("key", data.key);
+      if (result.error) throw new Error("Could not remove this setting.");
+      return { saved: true };
+    }
+    if (data.kind === "media_assets") {
+      const home = await db.from("pages").select("content").eq("slug", "home");
+      if (home.error) throw new Error("Could not check where this image is used.");
+      const used = (home.data ?? []).some(
+        (p) =>
+          p.content &&
+          typeof p.content === "object" &&
+          !Array.isArray(p.content) &&
+          p.content["hero_media_id"] === data.id,
+      );
+      if (used)
+        throw new Error(
+          "This image is the home page cover. Choose another cover before deleting it.",
+        );
+      const removed = await db
+        .from("media_assets")
+        .delete()
+        .eq("id", data.id)
+        .select("storage_path")
+        .maybeSingle();
+      if (removed.error || !removed.data) throw new Error("Could not delete this image.");
+      await db.storage.from("aviv-media").remove([removed.data.storage_path]);
+      return { saved: true };
+    }
+    const result = await db.from(data.kind).delete().eq("id", data.id);
+    if (result.error?.code === "23503")
+      throw new Error(
+        "This service has bookings, so it can't be deleted. Unpublish or deactivate it instead.",
+      );
+    if (result.error) throw new Error("Could not delete this item.");
     return { saved: true };
   });

@@ -25,6 +25,7 @@ import { Route as AdminLoginRouteImport } from './routes/admin.login'
 import { Route as BookingSuccessRouteImport } from './routes/booking.success'
 import { Route as SessionTokenRouteImport } from './routes/session.$token'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin/index'
+import { Route as AuthenticatedAdminAvailabilityRouteImport } from './routes/_authenticated/admin/availability'
 import { Route as AuthenticatedAdminBookingsRouteImport } from './routes/_authenticated/admin/bookings'
 import { Route as AuthenticatedAdminMediaRouteImport } from './routes/_authenticated/admin/media'
 import { Route as AuthenticatedAdminPagesRouteImport } from './routes/_authenticated/admin/pages'
@@ -113,6 +114,12 @@ const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthenticatedAdminRouteRoute,
 } as any)
+const AuthenticatedAdminAvailabilityRoute =
+  AuthenticatedAdminAvailabilityRouteImport.update({
+    id: '/availability',
+    path: '/availability',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
 const AuthenticatedAdminBookingsRoute =
   AuthenticatedAdminBookingsRouteImport.update({
     id: '/bookings',
@@ -174,6 +181,7 @@ export interface FileRoutesByFullPath {
   '/admin/login': typeof AdminLoginRoute
   '/booking/success': typeof BookingSuccessRoute
   '/session/$token': typeof SessionTokenRoute
+  '/admin/availability': typeof AuthenticatedAdminAvailabilityRoute
   '/admin/bookings': typeof AuthenticatedAdminBookingsRouteWithChildren
   '/admin/media': typeof AuthenticatedAdminMediaRoute
   '/admin/pages': typeof AuthenticatedAdminPagesRoute
@@ -198,6 +206,7 @@ export interface FileRoutesByTo {
   '/admin/login': typeof AdminLoginRoute
   '/booking/success': typeof BookingSuccessRoute
   '/session/$token': typeof SessionTokenRoute
+  '/admin/availability': typeof AuthenticatedAdminAvailabilityRoute
   '/admin/media': typeof AuthenticatedAdminMediaRoute
   '/admin/pages': typeof AuthenticatedAdminPagesRoute
   '/admin/services': typeof AuthenticatedAdminServicesRoute
@@ -224,6 +233,7 @@ export interface FileRoutesById {
   '/admin/login': typeof AdminLoginRoute
   '/booking/success': typeof BookingSuccessRoute
   '/session/$token': typeof SessionTokenRoute
+  '/_authenticated/admin/availability': typeof AuthenticatedAdminAvailabilityRoute
   '/_authenticated/admin/bookings': typeof AuthenticatedAdminBookingsRouteWithChildren
   '/_authenticated/admin/media': typeof AuthenticatedAdminMediaRoute
   '/_authenticated/admin/pages': typeof AuthenticatedAdminPagesRoute
@@ -251,6 +261,7 @@ export interface FileRouteTypes {
     | '/admin/login'
     | '/booking/success'
     | '/session/$token'
+    | '/admin/availability'
     | '/admin/bookings'
     | '/admin/media'
     | '/admin/pages'
@@ -275,6 +286,7 @@ export interface FileRouteTypes {
     | '/admin/login'
     | '/booking/success'
     | '/session/$token'
+    | '/admin/availability'
     | '/admin/media'
     | '/admin/pages'
     | '/admin/services'
@@ -300,6 +312,7 @@ export interface FileRouteTypes {
     | '/admin/login'
     | '/booking/success'
     | '/session/$token'
+    | '/_authenticated/admin/availability'
     | '/_authenticated/admin/bookings'
     | '/_authenticated/admin/media'
     | '/_authenticated/admin/pages'
@@ -443,6 +456,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminIndexRouteImport
       parentRoute: typeof AuthenticatedAdminRouteRoute
     }
+    '/_authenticated/admin/availability': {
+      id: '/_authenticated/admin/availability'
+      path: '/availability'
+      fullPath: '/admin/availability'
+      preLoaderRoute: typeof AuthenticatedAdminAvailabilityRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
     '/_authenticated/admin/bookings': {
       id: '/_authenticated/admin/bookings'
       path: '/bookings'
@@ -519,6 +539,7 @@ const AuthenticatedAdminBookingsRouteWithChildren =
   )
 
 interface AuthenticatedAdminRouteRouteChildren {
+  AuthenticatedAdminAvailabilityRoute: typeof AuthenticatedAdminAvailabilityRoute
   AuthenticatedAdminBookingsRoute: typeof AuthenticatedAdminBookingsRouteWithChildren
   AuthenticatedAdminMediaRoute: typeof AuthenticatedAdminMediaRoute
   AuthenticatedAdminPagesRoute: typeof AuthenticatedAdminPagesRoute
@@ -529,6 +550,7 @@ interface AuthenticatedAdminRouteRouteChildren {
 
 const AuthenticatedAdminRouteRouteChildren: AuthenticatedAdminRouteRouteChildren =
   {
+    AuthenticatedAdminAvailabilityRoute: AuthenticatedAdminAvailabilityRoute,
     AuthenticatedAdminBookingsRoute:
       AuthenticatedAdminBookingsRouteWithChildren,
     AuthenticatedAdminMediaRoute: AuthenticatedAdminMediaRoute,
