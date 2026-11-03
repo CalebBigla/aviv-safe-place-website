@@ -5,11 +5,14 @@ import { Button } from "@/components/ui/button";
 import { CTA, ServicesList, FAQs, Values } from "@/components/aviv-site";
 import { cmsPageHead, siteOrigin } from "@/lib/aviv/metadata";
 import sanctuary from "@/assets/aviv-welcome-scene.jpg";
-import { BrandMark, SupportExplorer } from "@/components/aviv-experience";
+import { BrandMark, SupportExplorer, scrollToSection } from "@/components/aviv-experience";
 import { useState } from "react";
 import conversationPhoto from "@/assets/aviv-connection-scene.jpg";
+import familyHealingPhoto from "@/assets/family-healing-circle.webp";
+import counselingPhoto from "@/assets/counselling-conversation.webp";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { contentQuery } from "@/lib/aviv/queries";
+
 export const Route = createFileRoute("/")({
   head: ({ match }) => {
     const data = match.context.queryClient.getQueryData(contentQuery.queryKey);
@@ -20,7 +23,6 @@ export const Route = createFileRoute("/")({
       "/",
     );
     if (!siteOrigin) return head;
-    // Only facts the site already publishes; "<" is escaped so CMS text cannot close the script.
     const organisation = {
       "@context": "https://schema.org",
       "@type": "Organization",
@@ -41,6 +43,7 @@ export const Route = createFileRoute("/")({
   },
   component: Index,
 });
+
 function Index() {
   const [paused, setPaused] = useState(false);
   const { data } = useSuspenseQuery(contentQuery);
@@ -49,16 +52,15 @@ function Index() {
   const copy = (key: string, fallback: string) =>
     (typeof home[key] === "string" && home[key]) || fallback;
   const cover = data.media.find((m) => m.id === home["hero_media_id"]);
+
   return (
     <>
+      {/* ── Hero ─────────────────────────────────────────── */}
       <section className="hero welcome-scene" data-paused={paused}>
         <img
           className="hero-photo"
           src={cover?.url || sanctuary}
-          alt={
-            cover?.alt_text ||
-            "Illustrative sunlit room with comfortable chairs overlooking a garden"
-          }
+          alt={cover?.alt_text || "Sunlit room with comfortable chairs overlooking a garden"}
           width={1920}
           height={1088}
           fetchPriority="high"
@@ -102,25 +104,35 @@ function Index() {
           >
             {paused ? <Play size={16} /> : <Pause size={16} />}
           </Button>
-          <a href="#welcome" className="flex gap-3 items-center">
+          <a
+            href="#welcome"
+            className="hero-scroll-link"
+            onClick={(event) => {
+              event.preventDefault();
+              scrollToSection("welcome");
+            }}
+          >
             A gentle beginning <ArrowDown size={14} />
           </a>
         </div>
       </section>
+
+      {/* ── Welcome intro ─────────────────────────────────── */}
       <section id="welcome" className="site-wrap section intro">
         <div>
           <div className="eyebrow">Welcome to AVIV Safe Place</div>
           <h2 className="section-title whitespace-pre-line">
             {copy("intro_title", "Your story matters.\nSo do you.")}
           </h2>
-          <img
-            className="editorial-photo welcome-photo"
-            src={conversationPhoto}
-            alt="A mother and daughter sharing a warm conversation."
-            width={626}
-            height={417}
-            loading="lazy"
-          />
+          <div className="care-image-frame editorial-photo welcome-photo">
+            <img
+              src={conversationPhoto}
+              alt="A mother and daughter sharing a warm conversation."
+              width={1440}
+              height={1024}
+              loading="lazy"
+            />
+          </div>
         </div>
         <div>
           <p className="section-copy">
@@ -142,13 +154,49 @@ function Index() {
           </Button>
         </div>
       </section>
+
+      {/* ── Support explorer ──────────────────────────────── */}
       <SupportExplorer />
+
+      {/* ── Family healing image split ────────────────────── */}
+      <section className="site-wrap section">
+        <div className="care-image-split">
+          <div>
+            <div className="eyebrow">A place to heal together</div>
+            <h2 className="section-title">
+              {copy("care_title", "Healing that holds the whole family.")}
+            </h2>
+            <p className="section-copy mt-4">
+              {copy(
+                "care_body",
+                "Family relationships hold some of our deepest wounds — and our deepest capacity for restoration. AVIV offers a gentle space to begin.",
+              )}
+            </p>
+            <Button asChild className="mt-7">
+              <Link to="/book">
+                Book a Session <ArrowUpRight />
+              </Link>
+            </Button>
+          </div>
+          <div className="care-image-frame">
+            <img
+              src={familyHealingPhoto}
+              alt="A family seated together in a warm counselling circle, sharing connection."
+              width={1280}
+              height={853}
+              loading="lazy"
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* ── Services ──────────────────────────────────────── */}
       <section className="bg-muted">
         <div className="site-wrap section">
           <div className="section-head">
             <div>
               <div className="eyebrow">Support, with care</div>
-              <h2 className="section-title mb-0">Space for what you’re carrying.</h2>
+              <h2 className="section-title mb-0">Space for what you're carrying.</h2>
             </div>
             <Button variant="link" asChild>
               <Link to="/services">
@@ -159,6 +207,8 @@ function Index() {
           <ServicesList />
         </div>
       </section>
+
+      {/* ── Values ────────────────────────────────────────── */}
       <section className="site-wrap section">
         <div className="eyebrow">What guides us</div>
         <h2 className="section-title">
@@ -166,6 +216,40 @@ function Index() {
         </h2>
         <Values />
       </section>
+
+      {/* ── Counselling conversation image ────────────────── */}
+      <section className="site-wrap section">
+        <div className="care-image-split care-image-split--reverse">
+          <div className="care-image-frame">
+            <img
+              src={counselingPhoto}
+              alt="A counsellor and client in a warm, supportive one-on-one conversation."
+              width={1280}
+              height={853}
+              loading="lazy"
+            />
+          </div>
+          <div>
+            <div className="eyebrow">Hear what you need to hear</div>
+            <h2 className="section-title">
+              {copy("counseling_title", "A conversation that changes things.")}
+            </h2>
+            <p className="section-copy mt-4">
+              {copy(
+                "counseling_body",
+                "Sometimes the most powerful thing is a safe space to speak and be heard. Our sessions are designed to hold that space with care.",
+              )}
+            </p>
+            <Button asChild className="mt-7">
+              <Link to="/services">
+                Explore our services <ArrowUpRight />
+              </Link>
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      {/* ── How it works ──────────────────────────────────── */}
       <section className="bg-muted">
         <div className="site-wrap section">
           <div className="eyebrow">A gentle beginning</div>
@@ -173,14 +257,14 @@ function Index() {
           <p className="section-copy mb-10">
             {copy(
               "approach_description",
-              "Our planned booking experience keeps care personal. No client account needed; appointments are confirmed by AVIV.",
+              "Our booking experience keeps care personal. No client account needed; appointments are confirmed by AVIV.",
             )}
           </p>
           <div className="steps">
             {[
               {
                 title: "Choose your support",
-                text: "Explore the published services and find the support you’d like to request.",
+                text: "Explore the published services and find the support you'd like to request.",
               },
               {
                 title: "Share your details",
@@ -204,6 +288,8 @@ function Index() {
           </div>
         </div>
       </section>
+
+      {/* ── FAQs ──────────────────────────────────────────── */}
       <section className="site-wrap section">
         <div className="section-head">
           <div>
@@ -218,6 +304,7 @@ function Index() {
         </div>
         <FAQs />
       </section>
+
       <CTA />
     </>
   );

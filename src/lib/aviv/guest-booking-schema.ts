@@ -5,7 +5,7 @@ const slug = z.string().min(1).max(100);
 
 export const availabilitySchema = z
   .object({ serviceSlug: slug, from: dateKey, to: dateKey })
-  .refine((v) => v.from <= v.to && Date.parse(v.to) - Date.parse(v.from) <= 31 * 86400000, {
+  .refine((v) => v.from <= v.to && Date.parse(v.to) - Date.parse(v.from) <= 32 * 86400000, {
     message: "Choose a shorter date range.",
   });
 
@@ -31,8 +31,8 @@ export const guestTokenSchema = z.object({ token: z.string().regex(/^[a-f0-9]{64
 
 export type GuestBookingInput = z.infer<typeof guestBookingSchema>;
 
-// open: at least one free time; full: every remaining time is taken; past: no remaining
-// times today; closed: AVIV has closed the day (blocked period).
+// open: at least one free time; full: every slot is taken by confirmed/pending bookings;
+// past: no remaining times today; closed: AVIV has blocked the day.
 export type AvailabilityDay = {
   date: string;
   starts: string[];

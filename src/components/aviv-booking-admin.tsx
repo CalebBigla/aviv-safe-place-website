@@ -12,6 +12,7 @@ import {
   Plus,
   RefreshCw,
   Trash2,
+  Video,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,6 +40,11 @@ import {
 } from "@/lib/aviv/booking-admin-schema";
 import { formatNaira } from "@/lib/aviv/format";
 import { AVIV_TIME_ZONE, LAGOS_OFFSET, addDays, isScheduledSlot } from "@/lib/aviv/schedule";
+import {
+  SESSION_EARLY_ENTRY_MINUTES,
+  SESSION_LATE_EXIT_MINUTES,
+  sessionWindow,
+} from "@/lib/aviv/session-schema";
 
 const label = (s: string) => s.replaceAll("_", " ");
 function time(s: string | null) {
@@ -275,6 +281,35 @@ const actions = {
 } as const;
 type Action = keyof typeof actions;
 
+// Reflects the room's hours for convenience; the server decides whether the room is open.
+function SessionEntry({ id, start, end }: { id: string; start: string; end: string }) {
+  const { opensAt, closesAt } = sessionWindow(start, end);
+  const now = Date.now();
+  if (now >= closesAt.getTime())
+    return <p className="text-sm mb-3">The video room for this appointment has closed.</p>;
+  return (
+    <div className="mb-4">
+      {now < opensAt.getTime() ? (
+        <Button disabled>
+          <Video />
+          Room opens {time(opensAt.toISOString())}
+        </Button>
+      ) : (
+        <Button asChild>
+          <Link to="/admin/session/$id" params={{ id }}>
+            <Video />
+            Join video session
+          </Link>
+        </Button>
+      )}
+      <p className="text-xs text-muted-foreground mt-3">
+        The room opens {SESSION_EARLY_ENTRY_MINUTES} minutes before the appointment and closes{" "}
+        {SESSION_LATE_EXIT_MINUTES} minutes after it ends. Sessions are not recorded.
+      </p>
+    </div>
+  );
+}
+
 export function BookingDetail({ id }: { id: string }) {
   const read = useServerFn(getAdminBooking);
   const act = useServerFn(actOnBooking);
@@ -400,9 +435,16 @@ export function BookingDetail({ id }: { id: string }) {
       </section>
       <section className="border-y py-7 mt-9">
         <h2 className="text-2xl mb-4">Session & notifications</h2>
+        {b.booking_status === "confirmed" && b.confirmed_start && b.confirmed_end ? (
+          <SessionEntry id={b.id} start={b.confirmed_start} end={b.confirmed_end} />
+        ) : (
+          <p className="text-sm text-muted-foreground leading-relaxed mb-3">
+            A video room becomes available once this appointment is confirmed.
+          </p>
+        )}
         <p className="text-sm text-muted-foreground leading-relaxed">
-          Video sessions and confirmation emails are not connected yet. Share appointment details
-          with the client directly until they are.
+          Confirmation emails are not connected yet. Clients enter from their private booking link,
+          so share appointment details with them directly.
         </p>
       </section>
       <section className="mt-9">

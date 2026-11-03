@@ -122,7 +122,7 @@ export type Database = {
           confirmed_start: string | null
           created_at: string
           currency: string
-          daily_room_id: string | null
+          meeting_room_id: string | null
           duration_minutes_snapshot: number | null
           id: string
           meeting_link_issued_at: string | null
@@ -155,7 +155,7 @@ export type Database = {
           confirmed_start?: string | null
           created_at?: string
           currency?: string
-          daily_room_id?: string | null
+          meeting_room_id?: string | null
           duration_minutes_snapshot?: number | null
           id?: string
           meeting_link_issued_at?: string | null
@@ -188,7 +188,7 @@ export type Database = {
           confirmed_start?: string | null
           created_at?: string
           currency?: string
-          daily_room_id?: string | null
+          meeting_room_id?: string | null
           duration_minutes_snapshot?: number | null
           id?: string
           meeting_link_issued_at?: string | null
@@ -567,7 +567,16 @@ export type Database = {
         Args: { _bucket: string; _limit: number; _window_seconds: number }
         Returns: boolean
       }
+      aviv_admin_session_access: { Args: { _id: string }; Returns: Json }
+      aviv_issue_session_link: {
+        Args: { _client_key: string; _manage_hash: string; _session_hash: string }
+        Returns: Json
+      }
       aviv_read_guest_booking: {
+        Args: { _client_key: string; _hash: string }
+        Returns: Json
+      }
+      aviv_read_session_access: {
         Args: { _client_key: string; _hash: string }
         Returns: Json
       }

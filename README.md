@@ -17,7 +17,7 @@ The original product brief is kept in [docs/product-brief.md](docs/product-brief
 | Public pages, CMS, administrator sign-in | Working |
 | Availability, slot holds, guest booking links | Working (requires migration `0008`, see below) |
 | Paystack payments | **Not integrated.** No payment is taken and nothing is ever marked paid. |
-| Daily.co video sessions | **Not integrated.** `/session/:token` is an honest placeholder. |
+| Agora video sessions | Built (requires migration `0011` and Agora credentials, see below). Confirmed appointments need a verified payment, so clients can't reach a room until Paystack is connected. |
 | Transactional email | **Not integrated.** Contact enquiries are stored for administrators; guests keep their private booking link. |
 
 ## Booking rules
@@ -37,7 +37,19 @@ The server generates a 256-bit random token, returns it to the guest once, and s
 - It expires 30 days after the appointment's scheduled end.
 - Cancelling a booking keeps the link working so the guest can see the cancellation.
 - Repeated invalid lookups are throttled per client (by hashed IP, never a raw address). Normal refreshes are not throttled.
-- This link is **not** a video-session credential. Session access will use separate, short-lived `session` tokens.
+- This link is **not** a video-session credential. While the room is open it can be exchanged for a separate `session` link.
+
+## Video sessions (Agora)
+
+Each confirmed, paid appointment gets one private room with two seats, one for the counsellor and one for the client.
+
+- **Hours:** the room opens 15 minutes before the appointment and closes 15 minutes after it ends. `public.aviv_session_room` decides; `src/lib/aviv/session-schema.ts` mirrors it for display.
+- **Client entry:** "Join your video session" on the booking link creates a `/session/:token` link. Only its hash is stored and only the newest link for a booking works.
+- **Administrator entry:** "Join video session" on the booking detail page opens `/admin/session/:id`. Identity and role are rechecked on every token request.
+- **Revocation:** moving, cancelling or completing an appointment revokes session links and clears the room. RTC tokens last at most 15 minutes and renewal rechecks the booking, so anyone still connected is removed when their current token runs out.
+- **Privacy:** room names are random and no names or emails are sent to Agora. Media is encrypted with a per-room key (`aes-256-gcm2`) derived on the server. Recording is not enabled.
+
+To enable it, create an Agora project **with the App Certificate enabled**, then set `AGORA_APP_ID` and `AGORA_APP_CERTIFICATE` as server-only values. Camera and microphone access need HTTPS (or `localhost`).
 
 ## Local setup
 

@@ -64,6 +64,27 @@
       "when": 1791931611629,
       "tag": "0008_aviv_booking_foundation",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1791935000000,
+      "tag": "0009_aviv_public_contact_submission",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1791935100000,
+      "tag": "0010_aviv_privacy_and_terms_content",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1791935200000,
+      "tag": "0011_aviv_agora_video_sessions",
+      "breakpoints": true
     }
   ]
 }

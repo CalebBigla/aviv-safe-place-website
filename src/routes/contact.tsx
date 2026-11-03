@@ -46,14 +46,15 @@ function Contact() {
       <section className="site-wrap section contact-grid">
         <div>
           <h2 className="section-title mt-0">Let’s connect.</h2>
-          <img
-            className="editorial-photo care-photo"
-            src={carePhoto}
-            alt="A welcoming counselling room with comfortable chairs and sunlight."
-            width={645}
-            height={645}
-            loading="lazy"
-          />
+          <div className="care-image-frame editorial-photo care-photo">
+            <img
+              src={carePhoto}
+              alt="A welcoming counselling room with comfortable chairs and sunlight."
+              width={1920}
+              height={1088}
+              loading="lazy"
+            />
+          </div>
           <ContactDetails settings={data.settings} />
           <div className="border-t mt-8 pt-8">
             <h3 className="text-xl">Looking for a session?</h3>

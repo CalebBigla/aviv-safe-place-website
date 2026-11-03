@@ -2,7 +2,7 @@ import { contentQuery } from "@/lib/aviv/queries";
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeading, ServicesList, FAQs, CTA } from "@/components/aviv-site";
 import { cmsPageHead } from "@/lib/aviv/metadata";
-import listeningPhoto from "@/assets/aviv-connection-scene.jpg";
+import familyCirclePhoto from "@/assets/family-counselling-circle.webp";
 export const Route = createFileRoute("/services")({
   head: ({ match }) =>
     cmsPageHead(
@@ -21,17 +21,28 @@ function Services() {
         title="Support for your next chapter."
         description="A place to begin, wherever you are in your story."
       />
-      <section className="site-wrap section services-with-photo">
-        <img
-          className="editorial-photo listening-photo"
-          src={listeningPhoto}
-          alt="Two people having a thoughtful counselling conversation"
-          width={600}
-          height={900}
-          loading="lazy"
-        />
+      <section className="site-wrap section">
+        <div className="care-image-split">
+          <div className="care-image-frame">
+            <img
+              src={familyCirclePhoto}
+              alt="A counsellor talking warmly with a family seated around her."
+              width={1280}
+              height={853}
+              loading="lazy"
+            />
+          </div>
+          <div>
+            <div className="eyebrow">How we can help</div>
+            <h2 className="section-title">Choose what fits where you are today.</h2>
+            <p className="section-copy">
+              Every session is a private space to talk and be heard. Take your time, and book when
+              you feel ready.
+            </p>
+          </div>
+        </div>
         <div className="services-directory">
-          <ServicesList headingLevel="h2" />
+          <ServicesList />
         </div>
       </section>
       <section id="faqs" className="site-wrap section pt-0">

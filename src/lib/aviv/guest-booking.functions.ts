@@ -45,7 +45,7 @@ const fail = (reason: BookingFailure): GuestBookingResult => ({
 
 // Free start times per open day, straight from the database. Only times are exposed.
 export const getGuestAvailability = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) => availabilitySchema.parse(input))
+  .validator((input: unknown) => availabilitySchema.parse(input))
   .handler(async ({ data }): Promise<AvailabilityResult> => {
     setResponseHeader("Cache-Control", "no-store");
     const client = publicClient();
@@ -96,7 +96,7 @@ export const getGuestAvailability = createServerFn({ method: "POST" })
 // Creates a 30-minute hold and returns the guest's manage token once. Payment is not
 // available yet, so the hold lapses unless a verified payment is recorded in a later phase.
 export const submitGuestBooking = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) => guestBookingSchema.parse(input))
+  .validator((input: unknown) => guestBookingSchema.parse(input))
   .handler(async ({ data }): Promise<GuestBookingResult> => {
     setResponseHeader("Cache-Control", "no-store");
     if (data.website) return fail("invalid");
@@ -146,7 +146,7 @@ export const submitGuestBooking = createServerFn({ method: "POST" })
   });
 
 export const readGuestBooking = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) => guestTokenSchema.parse(input))
+  .validator((input: unknown) => guestTokenSchema.parse(input))
   .handler(async ({ data }): Promise<GuestBookingRead> => {
     setResponseHeader("Cache-Control", "no-store");
     let db;

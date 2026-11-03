@@ -145,7 +145,10 @@ function RootComponent() {
       <PageMotion path={path} />
       {!admin && <Header />}
       <main id="main-content">
-        <Outlet />
+        {/* Remounting on navigation lets each public page ease in; administration stays still. */}
+        <div key={admin ? "admin" : path} className={admin ? undefined : "page-enter"}>
+          <Outlet />
+        </div>
       </main>
       {!admin && <Footer />}
     </QueryClientProvider>

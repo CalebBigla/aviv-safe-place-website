@@ -520,6 +520,173 @@ suite("AVIV booking database", () => {
     });
   });
 
+  describe("video sessions", () => {
+    // Puts a booking at a chosen time relative to now, which the weekly schedule wouldn't allow.
+    const appointment = async (
+      startsIn: string,
+      client = `session${++clientCount}@example.org`,
+    ) => {
+      const manage = rawToken();
+      const hold = await createHold("session-30", at(sat2, "11:00"), client, sha256(manage));
+      await sql`UPDATE public.bookings SET payment_status='successful', booking_status='confirmed', slot=NULL,
+        confirmed_start=now()+${startsIn}::interval, confirmed_end=now()+${startsIn}::interval+interval '30 minutes' WHERE public_reference=${hold.reference}`;
+      return {
+        manage,
+        reference: hold.reference,
+        booking: await bookingByReference(hold.reference),
+      };
+    };
+    let clientCount = 0;
+    const issue = (manage: string, session = rawToken(), key = `ip:session${++clientCount}`) =>
+      asRole(sql, "service_role", null, (tx) =>
+        tx`SELECT public.aviv_issue_session_link(${sha256(manage)}, ${sha256(session)}, ${key}) AS r`.then(
+          ([row]) => row?.["r"] as Record<string, unknown>,
+        ),
+      ).then((result) => ({ session, result }));
+    const access = (session: string, key = `ip:session${++clientCount}`) =>
+      asRole(sql, "service_role", null, (tx) =>
+        tx`SELECT public.aviv_read_session_access(${sha256(session)}, ${key}) AS r`.then(
+          ([row]) => row?.["r"] as Record<string, unknown>,
+        ),
+      );
+    const adminAccess = (id: string, actor: string) =>
+      asRole(sql, "authenticated", actor, (tx) =>
+        tx`SELECT public.aviv_admin_session_access(${id}::uuid) AS r`.then(
+          ([row]) => row?.["r"] as Record<string, unknown>,
+        ),
+      );
+
+    it("keeps the room closed until 15 minutes before the start", async () => {
+      const { manage, reference } = await appointment("16 minutes");
+      const { result } = await issue(manage);
+      expect(result["state"]).toBe("early");
+      expect(result).toHaveProperty("opens_at");
+      const row = await bookingByReference(reference);
+      expect(row["meeting_room_id"]).toBeNull();
+      const tokens =
+        await sql`SELECT 1 FROM public.booking_access_tokens WHERE booking_id=${row["id"]} AND purpose='session'`;
+      expect(tokens).toHaveLength(0);
+    });
+    it("opens one private room, storing only the session link's hash", async () => {
+      const { manage, reference, booking } = await appointment("10 minutes");
+      const { session, result } = await issue(manage);
+      expect(result).toEqual({ state: "open" });
+      const room = await access(session);
+      expect(room["state"]).toBe("open");
+      expect(room["room"]).toMatch(/^aviv-[a-f0-9]{32}$/);
+      expect(JSON.stringify(room)).not.toMatch(/Guest Client|example\.org/);
+      const row = await bookingByReference(reference);
+      expect(row["meeting_room_id"]).toBe(room["room"]);
+      expect(row["meeting_provider"]).toBe("agora");
+      expect(row["session_status"]).toBe("ready");
+      expect(row["meeting_link_issued_at"]).not.toBeNull();
+      const [stored] =
+        await sql`SELECT * FROM public.booking_access_tokens WHERE booking_id=${booking["id"]} AND purpose='session'`;
+      expect(stored!["token_hash"]).toBe(sha256(session));
+      expect(JSON.stringify(stored)).not.toContain(session);
+      // Renewing does not touch the booking, so it can't disturb an administrator's optimistic lock.
+      await access(session);
+      expect((await bookingByReference(reference))["version"]).toBe(row["version"]);
+      // The administrator enters the same room.
+      expect((await adminAccess(booking["id"], admin))["room"]).toBe(room["room"]);
+    });
+    it("keeps manage links and session links separate, and only the newest session link works", async () => {
+      const { manage } = await appointment("0 minutes");
+      expect((await access(manage))["state"]).toBe("unavailable");
+      const first = await issue(manage);
+      expect((await issue(first.session)).result["state"]).toBe("unavailable");
+      const second = await issue(manage);
+      expect((await access(first.session))["state"]).toBe("unavailable");
+      expect((await access(second.session))["state"]).toBe("open");
+    });
+    it("revokes entry when an appointment moves or is cancelled", async () => {
+      const moved = await appointment("5 minutes");
+      const movedLink = await issue(moved.manage);
+      await access(movedLink.session);
+      const version = (await bookingByReference(moved.reference))["version"];
+      await adminAction(moved.booking["id"], "confirm", version, at(sat2, "13:00"));
+      const row = await bookingByReference(moved.reference);
+      expect(row["meeting_room_id"]).toBeNull();
+      expect(row["meeting_provider"]).toBeNull();
+      expect(row["meeting_link_issued_at"]).toBeNull();
+      expect(row["session_status"]).toBe("not_started");
+      expect((await access(movedLink.session))["state"]).toBe("unavailable");
+      await adminAction(moved.booking["id"], "cancel", row["version"]);
+
+      const cancelled = await appointment("5 minutes");
+      const cancelledLink = await issue(cancelled.manage);
+      const before = (await bookingByReference(cancelled.reference))["version"];
+      await adminAction(cancelled.booking["id"], "cancel", before);
+      expect((await access(cancelledLink.session))["state"]).toBe("unavailable");
+      expect((await issue(cancelled.manage)).result["state"]).toBe("unavailable");
+      expect((await adminAccess(cancelled.booking["id"], admin))["state"]).toBe("unavailable");
+      // The guest can still read the cancellation.
+      expect((await readGuest(sha256(cancelled.manage)))?.["booking_status"]).toBe("cancelled");
+    });
+    it("closes the room 15 minutes after the end", async () => {
+      const open = await appointment("-44 minutes");
+      expect((await issue(open.manage)).result["state"]).toBe("open");
+      const over = await appointment("-46 minutes");
+      expect((await issue(over.manage)).result["state"]).toBe("ended");
+      expect((await adminAccess(over.booking["id"], admin))["state"]).toBe("ended");
+    });
+    it("refuses unpaid bookings even if marked confirmed", async () => {
+      const { manage, reference, booking } = await appointment("5 minutes");
+      await sql`UPDATE public.bookings SET payment_status='failed' WHERE public_reference=${reference}`;
+      expect((await issue(manage)).result["state"]).toBe("unavailable");
+      expect((await adminAccess(booking["id"], admin))["state"]).toBe("unavailable");
+    });
+    it("throttles guessed session links per client", async () => {
+      const { manage } = await appointment("5 minutes");
+      const { session } = await issue(manage);
+      for (let i = 0; i < 20; i++) await access(rawToken(), "ip:session-guesser");
+      expect(await access(session, "ip:session-guesser")).toEqual({ state: "rate_limited" });
+      expect((await access(session, "ip:session-honest"))["state"]).toBe("open");
+    });
+    it("audits entry once per administrator without recording the room", async () => {
+      const { booking } = await appointment("5 minutes");
+      await adminAccess(booking["id"], admin);
+      await adminAccess(booking["id"], admin);
+      const entries =
+        await sql`SELECT metadata FROM public.audit_logs WHERE action='session_opened' AND resource_id=${booking["id"]}`;
+      expect(entries).toHaveLength(1);
+      expect(JSON.stringify(entries)).not.toContain("aviv-");
+    });
+    it("is closed to browser roles and non-administrators", async () => {
+      const { booking } = await appointment("5 minutes");
+      expect(await failure(adminAccess(booking["id"], member))).toMatch(
+        /Administrator access required/,
+      );
+      expect(
+        await failure(
+          asRole(
+            sql,
+            "anon",
+            null,
+            (tx) => tx`SELECT public.aviv_admin_session_access(${booking["id"]}::uuid)`,
+          ),
+        ),
+      ).toMatch(/permission denied/);
+      const hash = "a".repeat(64);
+      for (const role of ["anon", "authenticated"] as const)
+        for (const call of [
+          `SELECT public.aviv_issue_session_link('${hash}','${hash}','k')`,
+          `SELECT public.aviv_read_session_access('${hash}','k')`,
+        ])
+          expect(await failure(asRole(sql, role, member, (tx) => tx.unsafe(call)))).toMatch(
+            /permission denied/,
+          );
+      for (const role of ["anon", "authenticated", "service_role"] as const)
+        expect(
+          await failure(
+            asRole(sql, role, member, (tx) =>
+              tx.unsafe(`SELECT public.aviv_session_room('${booking["id"]}'::uuid)`),
+            ),
+          ),
+        ).toMatch(/permission denied/);
+    });
+  });
+
   describe("rate limiting", () => {
     it("counts within a window and prunes stale buckets", async () => {
       await sql`INSERT INTO public.rate_limit_buckets(key,window_start,attempts) VALUES ('stale',now()-interval '2 days',99)`;

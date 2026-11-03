@@ -23,6 +23,11 @@ const errorMiddleware = createMiddleware().server(async ({ next }) => {
 // from cross-site requests.
 const csrfMiddleware = createCsrfMiddleware({
   filter: (ctx) => ctx.handlerType === "serverFn",
+  // In development the Nitro cloudflare-dev emulation may not forward
+  // Sec-Fetch-Site / Origin headers, which would cause a false 403. Allow
+  // requests without origin headers in non-production environments; cross-site
+  // requests that DO carry origin headers are still rejected.
+  allowRequestsWithoutOriginCheck: process.env["NODE_ENV"] !== "production",
 });
 
 export const startInstance = createStart(() => ({

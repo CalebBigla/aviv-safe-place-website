@@ -37,6 +37,7 @@ import { Route as AuthenticatedAdminSettingsRouteImport } from './routes/_authen
 import { Route as BookingManageTokenRouteImport } from './routes/booking.manage.$token'
 import { Route as AuthenticatedAdminBookingsIndexRouteImport } from './routes/_authenticated/admin/bookings.index'
 import { Route as AuthenticatedAdminBookingsIdRouteImport } from './routes/_authenticated/admin/bookings.$id'
+import { Route as AuthenticatedAdminSessionIdRouteImport } from './routes/_authenticated/admin/session.$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -183,6 +184,12 @@ const AuthenticatedAdminBookingsIdRoute =
     path: '/$id',
     getParentRoute: () => AuthenticatedAdminBookingsRoute,
   } as any)
+const AuthenticatedAdminSessionIdRoute =
+  AuthenticatedAdminSessionIdRouteImport.update({
+    id: '/session/$id',
+    path: '/session/$id',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -211,6 +218,7 @@ export interface FileRoutesByFullPath {
   '/booking/manage/$token': typeof BookingManageTokenRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/admin/bookings/$id': typeof AuthenticatedAdminBookingsIdRoute
+  '/admin/session/$id': typeof AuthenticatedAdminSessionIdRoute
   '/admin/bookings/': typeof AuthenticatedAdminBookingsIndexRoute
 }
 export interface FileRoutesByTo {
@@ -238,6 +246,7 @@ export interface FileRoutesByTo {
   '/booking/manage/$token': typeof BookingManageTokenRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/admin/bookings/$id': typeof AuthenticatedAdminBookingsIdRoute
+  '/admin/session/$id': typeof AuthenticatedAdminSessionIdRoute
   '/admin/bookings': typeof AuthenticatedAdminBookingsIndexRoute
 }
 export interface FileRoutesById {
@@ -269,6 +278,7 @@ export interface FileRoutesById {
   '/booking/manage/$token': typeof BookingManageTokenRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/admin/bookings/$id': typeof AuthenticatedAdminBookingsIdRoute
+  '/_authenticated/admin/session/$id': typeof AuthenticatedAdminSessionIdRoute
   '/_authenticated/admin/bookings/': typeof AuthenticatedAdminBookingsIndexRoute
 }
 export interface FileRouteTypes {
@@ -300,6 +310,7 @@ export interface FileRouteTypes {
     | '/booking/manage/$token'
     | '/admin/'
     | '/admin/bookings/$id'
+    | '/admin/session/$id'
     | '/admin/bookings/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -327,6 +338,7 @@ export interface FileRouteTypes {
     | '/booking/manage/$token'
     | '/admin'
     | '/admin/bookings/$id'
+    | '/admin/session/$id'
     | '/admin/bookings'
   id:
     | '__root__'
@@ -357,6 +369,7 @@ export interface FileRouteTypes {
     | '/booking/manage/$token'
     | '/_authenticated/admin/'
     | '/_authenticated/admin/bookings/$id'
+    | '/_authenticated/admin/session/$id'
     | '/_authenticated/admin/bookings/'
   fileRoutesById: FileRoutesById
 }
@@ -579,6 +592,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminBookingsIdRouteImport
       parentRoute: typeof AuthenticatedAdminBookingsRoute
     }
+    '/_authenticated/admin/session/$id': {
+      id: '/_authenticated/admin/session/$id'
+      path: '/session/$id'
+      fullPath: '/admin/session/$id'
+      preLoaderRoute: typeof AuthenticatedAdminSessionIdRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
   }
 }
 
@@ -606,6 +626,7 @@ interface AuthenticatedAdminRouteRouteChildren {
   AuthenticatedAdminServicesRoute: typeof AuthenticatedAdminServicesRoute
   AuthenticatedAdminSettingsRoute: typeof AuthenticatedAdminSettingsRoute
   AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
+  AuthenticatedAdminSessionIdRoute: typeof AuthenticatedAdminSessionIdRoute
 }
 
 const AuthenticatedAdminRouteRouteChildren: AuthenticatedAdminRouteRouteChildren =
@@ -618,6 +639,7 @@ const AuthenticatedAdminRouteRouteChildren: AuthenticatedAdminRouteRouteChildren
     AuthenticatedAdminServicesRoute: AuthenticatedAdminServicesRoute,
     AuthenticatedAdminSettingsRoute: AuthenticatedAdminSettingsRoute,
     AuthenticatedAdminIndexRoute: AuthenticatedAdminIndexRoute,
+    AuthenticatedAdminSessionIdRoute: AuthenticatedAdminSessionIdRoute,
   }
 
 const AuthenticatedAdminRouteRouteWithChildren =

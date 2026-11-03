@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { Button } from "@/components/ui/button";
@@ -14,25 +14,66 @@ export function AdminLogin() {
   const [busy, setBusy] = useState(false);
   const verify = useServerFn(getAdminIdentity);
   const navigate = useNavigate();
-  async function check() {
-    await verify();
-    await navigate({ to: "/admin", replace: true });
+  // Prevents concurrent verification calls from the mount check and the
+  // onAuthStateChange listener (which fires after OAuth redirect completion).
+  const verifyingRef = useRef(false);
+
+  async function tryForward() {
+    if (verifyingRef.current) return;
+    const { data } = await supabase.auth.getSession();
+    if (!data.session) return;
+    verifyingRef.current = true;
+    try {
+      await verify();
+      await navigate({ to: "/admin", replace: true });
+    } catch (err) {
+      // Distinguish between CSRF/server errors and genuine role-check failures.
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes("Administrator access has not been authorised")) {
+        setNotice("Administrator access has not been authorised for this account.");
+        // Sign out the non-admin session so the user can try a different account.
+        await supabase.auth.signOut();
+      } else if (msg.includes("Please sign in again") || msg.includes("Unauthorized")) {
+        setNotice("Your session could not be verified. Please try signing in again.");
+        await supabase.auth.signOut();
+      } else {
+        setNotice("Sign-in could not be completed. Please try again.");
+      }
+    } finally {
+      verifyingRef.current = false;
+    }
   }
+
   useEffect(() => {
     let active = true;
-    void supabase.auth.getUser().then(async ({ data }) => {
-      if (!data.user) return;
-      try {
-        await verify();
-        if (active) await navigate({ to: "/admin", replace: true });
-      } catch {
-        if (active) setNotice("Administrator access has not been authorised for this account.");
-      }
+
+    // Surface OAuth error parameters that Supabase may append to the redirect URL.
+    const params = new URLSearchParams(window.location.search);
+    const oauthError = params.get("error");
+    if (oauthError) {
+      setNotice(params.get("error_description") || "Sign-in failed.");
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+
+    // Check for an existing session on mount (covers page refresh / direct visit).
+    void tryForward();
+
+    // Listen for SIGNED_IN so the OAuth PKCE code-exchange redirect is handled
+    // even when the session was not yet available when the mount check ran.
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event) => {
+      if (!active) return;
+      if (event === "SIGNED_IN") void tryForward();
     });
+
     return () => {
       active = false;
+      subscription.unsubscribe();
     };
-  }, [verify, navigate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <div className="min-h-screen grid place-items-center px-6 py-12">
       <div className="w-full max-w-sm">
@@ -48,9 +89,15 @@ export function AdminLogin() {
             try {
               const result = await supabase.auth.signInWithPassword({ email, password });
               if (result.error) throw new Error("Email or password is incorrect.");
-              await check();
+              // onAuthStateChange SIGNED_IN fires after the session is stored and
+              // triggers tryForward(), which verifies the admin role and navigates.
+              // If it does not fire quickly enough, call tryForward directly.
+              await tryForward();
             } catch (err) {
-              setNotice(err instanceof Error ? err.message : "Sign-in failed.");
+              if (err instanceof Error && err.message === "Email or password is incorrect.") {
+                setNotice(err.message);
+              }
+              // Other errors are handled by tryForward's own catch block.
             } finally {
               setBusy(false);
             }
@@ -80,24 +127,6 @@ export function AdminLogin() {
             {busy ? "Signing in…" : "Sign in"}
           </Button>
         </form>
-        <Button
-          variant="outline"
-          className="w-full mt-4"
-          onClick={async () => {
-            setNotice("");
-            try {
-              const result = await supabase.auth.signInWithOAuth({
-                provider: "google",
-                options: { redirectTo: `${window.location.origin}/admin/login` },
-              });
-              if (result.error) throw result.error;
-            } catch (err) {
-              setNotice(err instanceof Error ? err.message : "Google sign-in failed.");
-            }
-          }}
-        >
-          Continue with Google
-        </Button>
         <Button
           variant="link"
           className="px-0 mt-3"

@@ -11,7 +11,7 @@ import {
   SheetDescription,
 } from "@/components/ui/sheet";
 import { contentQuery } from "@/lib/aviv/queries";
-import { BrandMark } from "./aviv-experience";
+import { BrandMark, useScrolled } from "./aviv-experience";
 import { formatNaira } from "@/lib/aviv/format";
 
 export function Wordmark() {
@@ -33,6 +33,7 @@ const links = [
 ] as const;
 export function Header() {
   const [open, setOpen] = useState(false);
+  const scrolled = useScrolled();
   return (
     <>
       <a
@@ -41,51 +42,53 @@ export function Header() {
       >
         Skip to content
       </a>
-      <header className="site-wrap site-header">
-        <Wordmark />
-        <nav aria-label="Main navigation" className="nav-links">
-          {links.map((l) => (
-            <Link key={l.to} to={l.to} activeOptions={{ exact: true }}>
-              {l.label}
-            </Link>
-          ))}
-        </nav>
-        <div className="flex items-center gap-3">
-          <Button asChild className="hidden md:inline-flex h-11">
-            <Link to="/book">
-              Book a Session <ArrowUpRight />
-            </Link>
-          </Button>
-          <Sheet open={open} onOpenChange={setOpen}>
-            <SheetTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="md:hidden"
-                aria-label="Open navigation"
-              >
-                <Menu />
-              </Button>
-            </SheetTrigger>
-            <SheetContent>
-              <SheetTitle>AVIV Safe Place</SheetTitle>
-              <SheetDescription>Heart Healed, Family Restored.</SheetDescription>
-              <nav className="flex flex-col gap-6 mt-10" aria-label="Mobile navigation">
-                {links.map((l) => (
-                  <Link key={l.to} to={l.to} onClick={() => setOpen(false)}>
-                    {l.label}
-                  </Link>
-                ))}
-                <Button asChild>
-                  <Link to="/book" onClick={() => setOpen(false)}>
-                    Book a Session <ArrowUpRight />
-                  </Link>
+      <div className="site-header-bar" data-scrolled={scrolled}>
+        <header className="site-wrap site-header">
+          <Wordmark />
+          <nav aria-label="Main navigation" className="nav-links">
+            {links.map((l) => (
+              <Link key={l.to} to={l.to} activeOptions={{ exact: true }}>
+                {l.label}
+              </Link>
+            ))}
+          </nav>
+          <div className="flex items-center gap-3">
+            <Button asChild className="hidden md:inline-flex h-11">
+              <Link to="/book">
+                Book a Session <ArrowUpRight />
+              </Link>
+            </Button>
+            <Sheet open={open} onOpenChange={setOpen}>
+              <SheetTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="md:hidden"
+                  aria-label="Open navigation"
+                >
+                  <Menu />
                 </Button>
-              </nav>
-            </SheetContent>
-          </Sheet>
-        </div>
-      </header>
+              </SheetTrigger>
+              <SheetContent>
+                <SheetTitle>AVIV Safe Place</SheetTitle>
+                <SheetDescription>Heart Healed, Family Restored.</SheetDescription>
+                <nav className="flex flex-col gap-6 mt-10" aria-label="Mobile navigation">
+                  {links.map((l) => (
+                    <Link key={l.to} to={l.to} onClick={() => setOpen(false)}>
+                      {l.label}
+                    </Link>
+                  ))}
+                  <Button asChild>
+                    <Link to="/book" onClick={() => setOpen(false)}>
+                      Book a Session <ArrowUpRight />
+                    </Link>
+                  </Button>
+                </nav>
+              </SheetContent>
+            </Sheet>
+          </div>
+        </header>
+      </div>
     </>
   );
 }
@@ -195,6 +198,7 @@ export function CTA() {
   const home = content && typeof content === "object" && !Array.isArray(content) ? content : {};
   return (
     <section className="cta-band">
+      <BrandMark variant="ivory" className="cta-mark" />
       <div className="site-wrap cta-inner">
         <div>
           <h2>
@@ -247,28 +251,30 @@ export function ServicesList({ headingLevel = "h3" }: { headingLevel?: "h2" | "h
     <div className="service-list">
       {data.services.map((s, i) => (
         <article className="service-item" key={s.slug} id={s.slug}>
-          <span className="text-xs text-muted-foreground" aria-hidden="true">
+          <span className="service-badge" aria-hidden="true">
             {String(i + 1).padStart(2, "0")}
           </span>
           <Heading>{s.title}</Heading>
-          <p className="section-copy text-sm">{s.description}</p>
+          <p className="text-sm leading-relaxed text-muted-foreground">{s.description}</p>
           {s.full_description && (
-            <details className="mt-4">
-              <summary>More about this service</summary>
-              <p className="section-copy text-sm whitespace-pre-wrap mt-3">{s.full_description}</p>
+            <details className="mt-4 text-sm">
+              <summary className="cursor-pointer text-primary hover:underline">More about this service</summary>
+              <p className="leading-relaxed whitespace-pre-wrap mt-3 text-muted-foreground">{s.full_description}</p>
             </details>
           )}
-          {s.audience && <p className="mt-4 text-sm">For {s.audience}</p>}
-          <div className="flex flex-wrap gap-4 my-5 text-sm">
-            {s.duration_minutes && <span>{s.duration_minutes} minutes</span>}
-            {s.price_minor !== null && <span>{formatNaira(s.price_minor)}</span>}
-            {s.delivery_format && <span>{s.delivery_format}</span>}
+          {s.audience && <p className="mt-3 text-xs text-muted-foreground">For {s.audience}</p>}
+          <div className="service-tags">
+            {s.duration_minutes && <span className="service-tag">{s.duration_minutes} min</span>}
+            {s.price_minor !== null && <span className="service-tag">{formatNaira(s.price_minor)}</span>}
+            {s.delivery_format && <span className="service-tag">{s.delivery_format}</span>}
           </div>
-          <Button asChild variant="outline">
-            <Link to="/book">
-              Book a Session <ArrowUpRight />
-            </Link>
-          </Button>
+          <div className="service-actions">
+            <Button asChild size="sm">
+              <Link to="/book">
+                Book a Session <ArrowUpRight />
+              </Link>
+            </Button>
+          </div>
         </article>
       ))}
     </div>
@@ -312,7 +318,9 @@ export function Values() {
         },
       ].map((v) => (
         <div key={v.title}>
-          <v.Icon size={30} strokeWidth={1.2} />
+          <span className="value-icon">
+            <v.Icon size={26} strokeWidth={1.3} />
+          </span>
           <h3>{v.title}</h3>
           <p>{v.text}</p>
         </div>

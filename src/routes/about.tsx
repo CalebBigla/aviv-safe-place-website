@@ -25,14 +25,15 @@ function About() {
         <div>
           <div className="eyebrow">Our purpose</div>
           <h2 className="section-title">Compassion at the centre.</h2>
-          <img
-            className="editorial-photo family-photo"
-            src={familyPhoto}
-            alt="A mother and daughter sharing a warm conversation."
-            width={735}
-            height={490}
-            loading="lazy"
-          />
+          <div className="care-image-frame editorial-photo family-photo">
+            <img
+              src={familyPhoto}
+              alt="A mother and daughter sharing a warm conversation."
+              width={1440}
+              height={1024}
+              loading="lazy"
+            />
+          </div>
         </div>
         <div>
           <p className="section-copy mb-6">

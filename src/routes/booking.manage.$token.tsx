@@ -1,13 +1,18 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
+import { Video } from "lucide-react";
 import { Unavailable } from "@/components/aviv-site";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { pageHead } from "@/lib/aviv/metadata";
 import { formatNaira } from "@/lib/aviv/format";
 import { formatLagosDateTime, formatLagosTime } from "@/lib/aviv/schedule";
 import { readGuestBooking } from "@/lib/aviv/guest-booking.functions";
 import { guestTokenSchema, type GuestBookingDetails } from "@/lib/aviv/guest-booking-schema";
+import { issueGuestSessionLink } from "@/lib/aviv/session.functions";
+import { sessionWindow } from "@/lib/aviv/session-schema";
 
 export const Route = createFileRoute("/booking/manage/$token")({
   head: () => pageHead("Your booking", "Secure guest booking status at AVIV Safe Place.", "", true),
@@ -44,6 +49,66 @@ function describe(b: GuestBookingDetails): { title: string; detail: string } {
   if (b.booking_status === "completed")
     return { title: "Completed", detail: "This session has taken place." };
   return { title: "Booking received", detail: "" };
+}
+
+const sessionLinkFailures = {
+  early: "Your session room isn't open yet.",
+  ended: "The room for this session has closed.",
+  unavailable: "This session isn't available. Please refresh this page.",
+  rate_limited: "There have been too many attempts. Please wait a few minutes and try again.",
+  infrastructure: "We couldn't open your session right now. Please try again shortly.",
+  not_configured: "Secure video sessions aren't connected yet. Please contact AVIV.",
+};
+
+// The button only reflects the room's hours; the server decides whether the guest may enter.
+function SessionEntry({ token, start, end }: { token: string; start: string; end: string }) {
+  const issue = useServerFn(issueGuestSessionLink);
+  const navigate = useNavigate();
+  const [now, setNow] = useState(() => Date.now());
+  const [busy, setBusy] = useState(false);
+  const [failure, setFailure] = useState("");
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 30000);
+    return () => clearInterval(timer);
+  }, []);
+  const { opensAt, closesAt } = sessionWindow(start, end);
+  if (now >= closesAt.getTime()) return null;
+  if (now < opensAt.getTime())
+    return (
+      <p className="mt-8 text-sm">
+        Your private video room opens here at {formatLagosDateTime(opensAt.toISOString())} (Lagos
+        time), 15 minutes before your session.
+      </p>
+    );
+  return (
+    <div className="mt-8">
+      <Button
+        disabled={busy}
+        onClick={async () => {
+          setBusy(true);
+          setFailure("");
+          try {
+            const result = await issue({ data: { token } });
+            if (result.status === "issued")
+              await navigate({ to: "/session/$token", params: { token: result.token } });
+            else setFailure(sessionLinkFailures[result.status]);
+          } catch {
+            setFailure(sessionLinkFailures.infrastructure);
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        <Video />
+        {busy ? "Opening…" : "Join your video session"}
+      </Button>
+      {failure && (
+        <p role="alert" className="text-destructive text-sm mt-3">
+          {failure}
+        </p>
+      )}
+    </div>
+  );
 }
 
 function Entry() {
@@ -108,6 +173,9 @@ function Entry() {
         <dt>Reference</dt>
         <dd className="break-all">{b.reference}</dd>
       </dl>
+      {b.booking_status === "confirmed" && b.confirmed_start && b.confirmed_end && (
+        <SessionEntry token={token} start={b.confirmed_start} end={b.confirmed_end} />
+      )}
       <p className="mt-6 text-sm text-muted-foreground">
         All times are in Lagos time (WAT, UTC+1). Keep this link private.
       </p>

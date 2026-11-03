@@ -13,10 +13,17 @@ function ResetPassword() {
   const [recovery, setRecovery] = useState(false);
   const [password, setPassword] = useState("");
   const [notice, setNotice] = useState("");
+  const [done, setDone] = useState(false);
   const [busy, setBusy] = useState(false);
   useEffect(() => {
-    const type = new URLSearchParams(window.location.hash.slice(1)).get("type");
-    setRecovery(type === "recovery" || type === "invite");
+    // Detect recovery / invite type from both the URL hash (implicit flow) and
+    // the URL search params (PKCE flow), then fall back to the onAuthStateChange
+    // PASSWORD_RECOVERY event which fires once the client exchanges the code.
+    const hashParams = new URLSearchParams(window.location.hash.slice(1));
+    const searchParams = new URLSearchParams(window.location.search);
+    const type = hashParams.get("type") || searchParams.get("type");
+    if (type === "recovery" || type === "invite") setRecovery(true);
+
     const { data } = supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") setRecovery(true);
     });
@@ -25,19 +32,30 @@ function ResetPassword() {
   return (
     <section className="site-wrap section max-w-xl">
       <h1 className="text-4xl mb-7">Set your password</h1>
-      {recovery ? (
+      {done ? (
+        <div className="space-y-5">
+          <p role="status">Your password has been updated.</p>
+          <Button asChild>
+            <Link to="/admin/login">Continue to sign in</Link>
+          </Button>
+        </div>
+      ) : recovery ? (
         <form
           className="space-y-5"
           onSubmit={async (e) => {
             e.preventDefault();
             setBusy(true);
             const result = await supabase.auth.updateUser({ password });
-            setNotice(
-              result.error
-                ? "Could not update your password. Request a new recovery link."
-                : "Password updated.",
-            );
-            setBusy(false);
+            if (result.error) {
+              setNotice("Could not update your password. Request a new recovery link.");
+              setBusy(false);
+            } else {
+              // Clear the recovery session so the user signs in fresh with the new password.
+              await supabase.auth.signOut();
+              setNotice("");
+              setDone(true);
+              setBusy(false);
+            }
           }}
         >
           <label className="block">
@@ -61,9 +79,11 @@ function ResetPassword() {
           {notice}
         </p>
       )}
-      <Button variant="link" asChild>
-        <Link to="/admin/login">Back to sign in</Link>
-      </Button>
+      {!done && (
+        <Button variant="link" asChild>
+          <Link to="/admin/login">Back to sign in</Link>
+        </Button>
+      )}
     </section>
   );
 }

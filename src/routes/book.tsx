@@ -1,8 +1,8 @@
 import { contentQuery } from "@/lib/aviv/queries";
 import { createFileRoute } from "@tanstack/react-router";
-import { PageHeading } from "@/components/aviv-site";
 import { GuestBookingForm } from "@/components/aviv-guest-booking";
 import { cmsPageHead } from "@/lib/aviv/metadata";
+
 export const Route = createFileRoute("/book")({
   loader: ({ context }) => context.queryClient.ensureQueryData(contentQuery),
   head: ({ match }) =>
@@ -14,24 +14,22 @@ export const Route = createFileRoute("/book")({
     ),
   component: Book,
 });
+
 function Book() {
   return (
-    <>
-      <PageHeading
-        label="Your gentle beginning"
-        title="Make space for yourself."
-        description="Explore our published sessions. You won’t need to create an account, and your appointment will be confirmed by AVIV."
-      />
-      <section className="site-wrap section">
-        <div className="eyebrow">Choose your support</div>
-        <h2 className="section-title">Find your starting point.</h2>
-        <p className="section-copy mb-8 text-sm">
-          Sessions are offered on Mondays and Wednesdays from 10:00 AM to 1:00 PM, and Saturdays
-          from 10:00 AM to 3:00 PM (Lagos time). Choose a time and we'll hold it for you while
-          payment is completed. Online payment is not available yet, so no payment will be taken.
+    <div className="site-wrap booking-page">
+      {/* Intro — small, above the fold */}
+      <div className="booking-page-intro animate-fade-up">
+        <div className="eyebrow">Your gentle beginning</div>
+        <h1 className="booking-page-title">Make space for yourself.</h1>
+        <p className="text-sm text-muted-foreground mt-3" style={{ maxWidth: 520 }}>
+          No account needed. Sessions are Mon & Wed 10 AM – 1 PM and Sat 10 AM – 3 PM (Lagos time).
+          AVIV confirms every appointment.
         </p>
-        <GuestBookingForm />
-      </section>
-    </>
+      </div>
+
+      {/* Booking form is the primary content — shown immediately */}
+      <GuestBookingForm />
+    </div>
   );
 }
