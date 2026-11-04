@@ -1,10 +1,14 @@
 import { createServerFn } from "@tanstack/react-start";
 import { contactSchema } from "./contact-schema";
-import { clientKey, sha256Hex } from "./request.server";
-import { publicClient } from "./public-client";
+import { clientKey, serviceClient, sha256Hex } from "./request.server";
+import { passesBotCheck } from "./turnstile.server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-type ContactResult = { sent: boolean; reason?: "rate_limited" | "infrastructure"; message: string };
+type ContactResult = {
+  sent: boolean;
+  reason?: "rate_limited" | "verification" | "infrastructure";
+  message: string;
+};
 
 const unavailable: ContactResult = {
   sent: false,
@@ -18,9 +22,20 @@ export const submitContact = createServerFn({ method: "POST" })
     // Honeypot: look like a normal failure so automated submitters learn nothing.
     if (data.website) return { sent: false, message: "Your message could not be sent." };
 
-    // Use the public client — the SECURITY DEFINER RPC handles writes and rate limiting
-    // internally without needing the service role key in the runtime environment.
-    const db = publicClient() as unknown as SupabaseClient;
+    if (!(await passesBotCheck(data.turnstileToken)))
+      return {
+        sent: false,
+        reason: "verification",
+        message: "Please complete the security check and try again.",
+      };
+
+    // Server only: the rate-limit keys below must never be chosen by the caller.
+    let db: SupabaseClient;
+    try {
+      db = (await serviceClient()) as unknown as SupabaseClient;
+    } catch {
+      return unavailable;
+    }
 
     const bucket1 = `contact:${await clientKey()}`;
     const bucket2 = `contact:email:${await sha256Hex(data.email.toLowerCase())}`;
@@ -35,7 +50,7 @@ export const submitContact = createServerFn({ method: "POST" })
     });
 
     if (result.error) {
-      console.error("[aviv-contact] rpc failed:", result.error.code, result.error.message);
+      console.error("[aviv-contact] rpc failed:", result.error.code);
       return unavailable;
     }
 
@@ -46,7 +61,8 @@ export const submitContact = createServerFn({ method: "POST" })
         return {
           sent: false,
           reason: "rate_limited",
-          message: "You've sent several messages recently. Please wait an hour before trying again.",
+          message:
+            "You've sent several messages recently. Please wait an hour before trying again.",
         };
       }
       if (payload?.reason === "invalid") {

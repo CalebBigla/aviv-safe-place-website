@@ -2,6 +2,16 @@ import { createStart, createCsrfMiddleware, createMiddleware } from "@tanstack/r
 
 import { renderErrorPage } from "./lib/error-page";
 import { attachSupabaseAuth } from "@/integrations/supabase/auth-attacher";
+import { securityHeaders } from "@/lib/aviv/security-headers";
+
+const securityHeadersMiddleware = createMiddleware().server(async ({ next, request }) => {
+  const headers = securityHeaders(new URL(request.url).pathname, import.meta.env.PROD);
+  const result = await next();
+  // The error handler below returns a bare Response rather than a middleware result.
+  const response = result instanceof Response ? result : result.response;
+  for (const [name, value] of Object.entries(headers)) response.headers.set(name, value);
+  return result;
+});
 
 const errorMiddleware = createMiddleware().server(async ({ next }) => {
   try {
@@ -32,5 +42,5 @@ const csrfMiddleware = createCsrfMiddleware({
 
 export const startInstance = createStart(() => ({
   functionMiddleware: [attachSupabaseAuth],
-  requestMiddleware: [errorMiddleware, csrfMiddleware],
+  requestMiddleware: [securityHeadersMiddleware, errorMiddleware, csrfMiddleware],
 }));

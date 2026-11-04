@@ -6,12 +6,14 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { getAdminIdentity } from "@/lib/aviv/admin.functions";
 import { Wordmark } from "./aviv-site";
+import { TwoFactor, twoFactorStep, type TwoFactorStep } from "./aviv-mfa";
 
 export function AdminLogin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
+  const [mfaStep, setMfaStep] = useState<TwoFactorStep | null>(null);
   const verify = useServerFn(getAdminIdentity);
   const navigate = useNavigate();
   // Prevents concurrent verification calls from the mount check and the
@@ -24,6 +26,9 @@ export function AdminLogin() {
     if (!data.session) return;
     verifyingRef.current = true;
     try {
+      const step = await twoFactorStep();
+      setMfaStep(step);
+      if (step) return;
       await verify();
       await navigate({ to: "/admin", replace: true });
     } catch (err) {
@@ -73,6 +78,27 @@ export function AdminLogin() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  if (mfaStep)
+    return (
+      <div className="min-h-screen grid place-items-center px-6 py-12">
+        <div className="w-full max-w-sm">
+          <Wordmark />
+          <div className="eyebrow mt-12">Administration</div>
+          <TwoFactor step={mfaStep} onVerified={() => void tryForward()} />
+          <Button
+            variant="link"
+            className="px-0 mt-3"
+            onClick={async () => {
+              await supabase.auth.signOut();
+              setMfaStep(null);
+            }}
+          >
+            Sign out
+          </Button>
+        </div>
+      </div>
+    );
 
   return (
     <div className="min-h-screen grid place-items-center px-6 py-12">

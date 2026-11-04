@@ -420,18 +420,60 @@ suite("AVIV booking database", () => {
           `SELECT public.aviv_read_guest_booking('${"a".repeat(64)}','k')`,
           `SELECT public.aviv_consume_rate_limit('k',1,60)`,
           `SELECT public.aviv_expire_stale_holds()`,
+          `SELECT public.aviv_submit_contact('n','a@b.co','s','m','bucket1','bucket2')`,
+          `SELECT count(*) FROM public.aviv_slot_availability('${sat}'::date,'${sat}'::date,30)`,
         ])
           expect(await failure(asRole(sql, role, member, (tx) => tx.unsafe(call)))).toMatch(
             /permission denied/,
           );
       const open = await asRole(
         sql,
-        "anon",
+        "service_role",
         null,
         (tx) =>
           tx`SELECT count(*)::int n FROM public.aviv_slot_availability(${sat}::date, ${sat}::date, 30)`,
       );
       expect(open[0]!["n"]).toBe(9);
+      const contact = await asRole(
+        sql,
+        "service_role",
+        null,
+        (tx) => tx`SELECT public.aviv_submit_contact('n','a@b.co','s','m','c:ip','c:email') AS r`,
+      );
+      expect(contact[0]!["r"]).toEqual({ ok: true });
+    });
+    it("gives administrators no rights without two-factor, even with the right password", async () => {
+      const hold = await createHold("session-30", at(sat2, "11:30"));
+      const paid = await markPaid(hold.reference);
+      const withoutCode = <T>(fn: (tx: Sql) => Promise<T>) =>
+        asRole(sql, "authenticated", admin, fn, "aal1");
+      const visible = await withoutCode((tx) => tx`SELECT count(*)::int n FROM public.bookings`);
+      expect(visible[0]!["n"]).toBe(0);
+      const role = await withoutCode(
+        (tx) => tx`SELECT public.has_role(${admin}::uuid,'admin') AS ok`,
+      );
+      expect(role[0]!["ok"]).toBe(false);
+      expect(
+        await failure(
+          withoutCode(
+            (tx) =>
+              tx`SELECT public.aviv_admin_booking_action(${paid.id}::uuid,'cancel',${paid.updated_at}::text::timestamptz)`,
+          ),
+        ),
+      ).toMatch(/Administrator access required/);
+      expect(
+        await failure(
+          withoutCode((tx) => tx`SELECT public.aviv_admin_session_access(${paid.id}::uuid)`),
+        ),
+      ).toMatch(/Administrator access required/);
+      const withCode = await asRole(
+        sql,
+        "authenticated",
+        admin,
+        (tx) => tx`SELECT public.has_role(${admin}::uuid,'admin') AS ok`,
+      );
+      expect(withCode[0]!["ok"]).toBe(true);
+      await sql`UPDATE public.bookings SET booking_status='cancelled', slot=NULL WHERE id=${paid.id}`;
     });
     it("refuses admin booking actions for guests and non-admins", async () => {
       const hold = await createHold("session-60", at(mon, "12:00"));
@@ -590,14 +632,87 @@ suite("AVIV booking database", () => {
       // The administrator enters the same room.
       expect((await adminAccess(booking["id"], admin))["room"]).toBe(room["room"]);
     });
-    it("keeps manage links and session links separate, and only the newest session link works", async () => {
+    it("keeps manage links and session links separate, and new links don't break earlier ones", async () => {
       const { manage } = await appointment("0 minutes");
       expect((await access(manage))["state"]).toBe("unavailable");
       const first = await issue(manage);
       expect((await issue(first.session)).result["state"]).toBe("unavailable");
       const second = await issue(manage);
-      expect((await access(first.session))["state"]).toBe("unavailable");
+      expect((await access(first.session))["state"]).toBe("open");
       expect((await access(second.session))["state"]).toBe("open");
+    });
+    describe("emailed confirmation links", () => {
+      const emailLink = (id: string, session = rawToken(), actor = admin) =>
+        asRole(sql, "authenticated", actor, (tx) =>
+          tx`SELECT public.aviv_admin_confirmation_link(${id}::uuid, ${sha256(session)}) AS r`.then(
+            ([row]) => row?.["r"] as Record<string, unknown>,
+          ),
+        ).then((details) => ({ session, details }));
+
+      it("works before the room opens, shows a waiting state, then lets the client in", async () => {
+        const { booking } = await appointment("2 hours");
+        const { session, details } = await emailLink(booking["id"]);
+        expect(details["email"]).toMatch(/@example\.org$/);
+        expect(Object.keys(details).sort()).toEqual(["email", "end", "name", "start"]);
+        const [stored] =
+          await sql`SELECT purpose, expires_at FROM public.booking_access_tokens WHERE token_hash=${sha256(session)}`;
+        expect(stored!["purpose"]).toBe("session");
+        expect(JSON.stringify(stored)).not.toContain(session);
+        expect((await access(session))["state"]).toBe("early");
+        await sql`UPDATE public.bookings SET confirmed_start=now(), confirmed_end=now()+interval '30 minutes' WHERE id=${booking["id"]}`;
+        expect((await access(session))["state"]).toBe("open");
+      });
+      it("survives the client also joining from their booking page", async () => {
+        const { manage, booking } = await appointment("5 minutes");
+        const { session } = await emailLink(booking["id"]);
+        await issue(manage);
+        expect((await access(session))["state"]).toBe("open");
+      });
+      it("stops working when the appointment moves, cancels or the room closes", async () => {
+        const { booking, reference } = await appointment("5 minutes");
+        const { session } = await emailLink(booking["id"]);
+        const version = (await bookingByReference(reference))["version"];
+        await adminAction(booking["id"], "confirm", version, at(sat2, "13:00"));
+        expect((await access(session))["state"]).toBe("unavailable");
+        const moved = await bookingByReference(reference);
+        await adminAction(booking["id"], "cancel", moved["version"]);
+        expect(await failure(emailLink(booking["id"]))).toBe(
+          "Only a confirmed, paid appointment can be emailed",
+        );
+        const over = await appointment("-46 minutes");
+        expect(await failure(emailLink(over.booking["id"]))).toBe(
+          "This appointment has already ended",
+        );
+      });
+      it("records only that an email was sent, never who to or the link", async () => {
+        const { booking } = await appointment("5 minutes");
+        const { session } = await emailLink(booking["id"]);
+        await asRole(
+          sql,
+          "authenticated",
+          admin,
+          (tx) =>
+            tx`SELECT public.aviv_admin_record_confirmation_email(${booking["id"]}::uuid, true)`,
+        );
+        const [entry] =
+          await sql`SELECT action, metadata FROM public.audit_logs WHERE resource_id=${booking["id"]} AND action LIKE 'confirmation_email%'`;
+        expect(entry!["action"]).toBe("confirmation_email_sent");
+        expect(JSON.stringify(entry)).not.toMatch(/example\.org/);
+        expect(JSON.stringify(entry)).not.toContain(session);
+      });
+      it("is refused for guests and non-administrators", async () => {
+        const { booking } = await appointment("5 minutes");
+        expect(await failure(emailLink(booking["id"], rawToken(), member))).toMatch(
+          /Administrator access required/,
+        );
+        for (const call of [
+          `SELECT public.aviv_admin_confirmation_link('${booking["id"]}'::uuid,'${"a".repeat(64)}')`,
+          `SELECT public.aviv_admin_record_confirmation_email('${booking["id"]}'::uuid,true)`,
+        ])
+          expect(await failure(asRole(sql, "anon", null, (tx) => tx.unsafe(call)))).toMatch(
+            /permission denied/,
+          );
+      });
     });
     it("revokes entry when an appointment moves or is cancelled", async () => {
       const moved = await appointment("5 minutes");

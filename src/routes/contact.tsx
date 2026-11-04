@@ -8,6 +8,7 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { ArrowUpRight } from "lucide-react";
 import type { z } from "zod";
 import { PageHeading, ContactDetails } from "@/components/aviv-site";
+import { BotCheck, botCheckEnabled } from "@/components/aviv-turnstile";
 import { Button } from "@/components/ui/button";
 import { cmsPageHead } from "@/lib/aviv/metadata";
 import { contactSchema } from "@/lib/aviv/contact-schema";
@@ -28,6 +29,8 @@ function Contact() {
   const { data } = useSuspenseQuery(contentQuery);
   const submit = useServerFn(submitContact);
   const [notice, setNotice] = useState("");
+  const [botToken, setBotToken] = useState("");
+  const [botAttempt, setBotAttempt] = useState(0);
   const {
     register,
     handleSubmit,
@@ -74,11 +77,13 @@ function Contact() {
           onSubmit={handleSubmit(async (values) => {
             setNotice("");
             try {
-              const result = await submit({ data: values });
+              const result = await submit({ data: { ...values, turnstileToken: botToken } });
               setNotice(result.message);
             } catch {
               setNotice("Your message could not be sent. Please try again later.");
             }
+            // Tokens are single use, so every attempt needs a new one.
+            setBotAttempt((attempt) => attempt + 1);
           })}
           noValidate
         >
@@ -136,7 +141,12 @@ function Contact() {
             General enquiries are stored securely for the AVIV team. Please do not include sensitive
             counselling details. Email notifications are not enabled yet.
           </p>
-          <Button type="submit" disabled={isSubmitting} className="mt-6 h-12">
+          <BotCheck onToken={setBotToken} resetKey={botAttempt} />
+          <Button
+            type="submit"
+            disabled={isSubmitting || (botCheckEnabled && !botToken)}
+            className="mt-6 h-12"
+          >
             {isSubmitting ? "Submitting…" : "Send enquiry"} <ArrowUpRight />
           </Button>
           {notice && (

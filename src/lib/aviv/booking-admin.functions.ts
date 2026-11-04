@@ -8,6 +8,7 @@ import {
   queuePaymentStatuses,
 } from "./booking-admin-schema";
 import { requireAdmin } from "./admin-auth.server";
+import { sendConfirmationEmail } from "./email.server";
 import { z } from "zod";
 
 // Messages raised by the booking database functions that are safe to show administrators.
@@ -96,7 +97,20 @@ export const actOnBooking = createServerFn({ method: "POST" })
         result.error.message,
         "The booking could not be updated. Refresh and try again.",
       );
-    return { saved: true };
+    return {
+      saved: true,
+      email:
+        data.action === "confirm" ? await sendConfirmationEmail(context.supabase, data.id) : null,
+    };
+  });
+
+// Sends the confirmation email again, with a new link, if the first attempt failed or was lost.
+export const resendConfirmationEmail = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    await requireAdmin(context.supabase, context.userId);
+    return { email: await sendConfirmationEmail(context.supabase, data.id) };
   });
 
 export const listBookingBlocks = createServerFn({ method: "POST" })

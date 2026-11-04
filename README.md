@@ -5,7 +5,7 @@ and a protected administration area.
 
 - **App:** React 19 + TanStack Start (SSR, file-based routes, server functions), TanStack Query, Tailwind/shadcn.
 - **Data:** Supabase PostgreSQL (RLS), Supabase Auth (administrators only), Supabase Storage (private `aviv-media` bucket).
-- **Hosting:** Cloudflare Workers via Nitro (`npm run build` produces `dist/`).
+- **Hosting:** Vercel via Nitro (`npm run build` produces `.vercel/output`).
 - **Server code:** TanStack server functions and server routes. Supabase Edge Functions are not used.
 
 The original product brief is kept in [docs/product-brief.md](docs/product-brief.md).
@@ -17,8 +17,9 @@ The original product brief is kept in [docs/product-brief.md](docs/product-brief
 | Public pages, CMS, administrator sign-in | Working |
 | Availability, slot holds, guest booking links | Working (requires migration `0008`, see below) |
 | Paystack payments | **Not integrated.** No payment is taken and nothing is ever marked paid. |
-| Agora video sessions | Built (requires migration `0011` and Agora credentials, see below). Confirmed appointments need a verified payment, so clients can't reach a room until Paystack is connected. |
-| Transactional email | **Not integrated.** Contact enquiries are stored for administrators; guests keep their private booking link. |
+| Agora video sessions | Built (requires migrations `0011`, `0012` and Agora credentials, see below). Confirmed appointments need a verified payment, so clients can't reach a room until Paystack is connected. |
+| Confirmation email | Built on Resend (requires `RESEND_API_KEY` and `EMAIL_FROM`). Only confirmations are emailed; contact enquiries are stored for administrators. |
+| Bot check | Built on Cloudflare Turnstile (requires `VITE_TURNSTILE_SITE_KEY` and `TURNSTILE_SECRET_KEY`). |
 
 ## Booking rules
 
@@ -44,12 +45,31 @@ The server generates a 256-bit random token, returns it to the guest once, and s
 Each confirmed, paid appointment gets one private room with two seats, one for the counsellor and one for the client.
 
 - **Hours:** the room opens 15 minutes before the appointment and closes 15 minutes after it ends. `public.aviv_session_room` decides; `src/lib/aviv/session-schema.ts` mirrors it for display.
-- **Client entry:** "Join your video session" on the booking link creates a `/session/:token` link. Only its hash is stored and only the newest link for a booking works.
-- **Administrator entry:** "Join video session" on the booking detail page opens `/admin/session/:id`. Identity and role are rechecked on every token request.
+- **Client entry:** confirming an appointment emails the client a `/session/:token` link. "Join your video session" on the booking link creates another. Only hashes are stored, and opening either link before the room opens shows a waiting page.
+- **Administrator entry:** "Join video session" on the booking detail page opens `/admin/session/:id`. Identity, two-factor and role are rechecked on every token request.
 - **Revocation:** moving, cancelling or completing an appointment revokes session links and clears the room. RTC tokens last at most 15 minutes and renewal rechecks the booking, so anyone still connected is removed when their current token runs out.
-- **Privacy:** room names are random and no names or emails are sent to Agora. Media is encrypted with a per-room key (`aes-256-gcm2`) derived on the server. Recording is not enabled.
+- **Privacy:** room names are random and no names or emails are sent to Agora. Media is encrypted in transit with a per-room key (`aes-256-gcm2`) derived on the server. The SDK shares that key with Agora, so this is not end-to-end encryption that excludes Agora. Recording is not enabled.
 
 To enable it, create an Agora project **with the App Certificate enabled**, then set `AGORA_APP_ID` and `AGORA_APP_CERTIFICATE` as server-only values. Camera and microphone access need HTTPS (or `localhost`).
+
+## Confirmation email
+
+Set `RESEND_API_KEY` and `EMAIL_FROM` (a sender on a domain verified in Resend). The email carries the time and the video link, and deliberately leaves out the type of session, because inboxes are often shared or previewed. If sending fails the appointment stays confirmed, the administrator is told, and **Send confirmation email** on the booking page sends a new link. The audit log records only whether an email was sent.
+
+## Security
+
+- **Administrator two-factor:** every administrator needs an authenticator app. They set it up at their first sign-in, and the database refuses administrator rights without it (`public.has_role`). If someone loses their device, an owner removes the factor under Supabase → Authentication → Users, and they set up a new one at their next sign-in.
+- **Public sign-up:** must be disabled under Supabase → Authentication → Sign In / Providers. The site has no sign-up form, but the Supabase API accepts sign-ups unless this is off. Create administrators by invitation from the dashboard.
+- **Rate limits:** keyed on a hash of the Vercel-supplied client address. Holds, availability, the contact form and guest links all have limits, and availability and the contact form can only be reached through the server.
+- **Headers:** `src/lib/aviv/security-headers.ts` sets the content security policy, framing, referrer and camera/microphone rules, and `no-store` on private pages.
+
+## Deploying to Vercel
+
+1. Import the GitHub repository. `vercel.json` sets the build. No other build settings are needed.
+2. Add the environment variables from `.env.example`. Use separate values for Preview deployments, or none, rather than production keys.
+3. Deploy, then add the site's URL to Supabase → Authentication → URL Configuration so password reset emails work.
+4. Apply migrations with `npm run db:migrate`. **Do this after the code is live:** migration `0012` makes the database require two-factor and server-only calls, which earlier code doesn't support.
+5. Sign in at `/admin/login` straight away and set up two-factor.
 
 ## Local setup
 
@@ -76,7 +96,7 @@ Guest booking, booking links and the contact form need a real `SUPABASE_SERVICE_
 | `npm run lint` | ESLint + Prettier (generated Supabase files are excluded) |
 | `npm test` | Unit tests; database tests are skipped unless configured |
 | `npm run test:db` | Database tests (schedule, holds, overlap/concurrency, closures, tokens, RLS/grants, admin lifecycle) |
-| `npm run build` | Production build |
+| `npm run build` | Production build for Vercel |
 
 The database tests need a **local, disposable** PostgreSQL. They refuse non-local hosts and recreate a database named `aviv_test`:
 

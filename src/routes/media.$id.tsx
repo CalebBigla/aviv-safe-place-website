@@ -26,7 +26,8 @@ export const Route = createFileRoute("/media/$id")({
         return new Response(file.data, {
           headers: {
             "content-type": asset.data.mime_type,
-            "cache-control": "public, max-age=3600, s-maxage=86400",
+            // An unpublished image disappears from caches within the hour.
+            "cache-control": "public, max-age=3600, s-maxage=3600",
             "x-content-type-options": "nosniff",
           },
         });

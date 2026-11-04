@@ -24,8 +24,11 @@ export function tokenLifetime(closesAt: string, now = Date.now()) {
   return Math.max(30, Math.min(TOKEN_LIFETIME_SECONDS, remaining));
 }
 
-// Both participants derive the same per-room key. It is not stored and never leaves this server
-// except to an authorised participant; the label keeps it separate from the certificate's other uses.
+// Both participants derive the same per-room key, which is not stored; the labels keep it separate
+// from the certificate's other uses. The SDK sends the secret to Agora under Agora's public key, so
+// this is encryption in transit with a per-room key, not end-to-end encryption that excludes Agora.
+// That RSA key fits at most 62 bytes, so the 32-byte secret is base64 encoded (44 characters): hex
+// (64 characters) makes every join fail with an OperationError.
 export async function deriveMediaKey(certificate: string, channel: string) {
   const key = await crypto.subtle.importKey(
     "raw",
@@ -35,16 +38,14 @@ export async function deriveMediaKey(certificate: string, channel: string) {
     ["sign"],
   );
   const derive = async (label: string) =>
-    Array.from(
-      new Uint8Array(
-        await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`${label}:${channel}`)),
-      ),
-    )
-      .map((v) => v.toString(16).padStart(2, "0"))
-      .join("");
+    new Uint8Array(
+      await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`${label}:${channel}`)),
+    );
   return {
-    secret: await derive("aviv-media-secret"),
-    salt: await derive("aviv-media-salt"),
+    secret: btoa(String.fromCharCode(...(await derive("aviv-media-secret")))),
+    salt: Array.from(await derive("aviv-media-salt"), (v) => v.toString(16).padStart(2, "0")).join(
+      "",
+    ),
   };
 }
 

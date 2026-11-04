@@ -85,6 +85,13 @@
       "when": 1791935200000,
       "tag": "0011_aviv_agora_video_sessions",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1791935300000,
+      "tag": "0012_aviv_security_hardening_and_confirmation_links",
+      "breakpoints": true
     }
   ]
 }

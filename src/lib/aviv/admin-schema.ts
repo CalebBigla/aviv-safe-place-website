@@ -38,7 +38,7 @@ export const cmsSchema = z.discriminatedUnion("kind", [
     audience: text,
     // Bookable sessions are 30 or 60 minutes (also enforced by the database).
     duration_minutes: z.union([z.literal(30), z.literal(60)], {
-      errorMap: () => ({ message: "Sessions are 30 or 60 minutes." }),
+      error: "Sessions are 30 or 60 minutes.",
     }),
     price_minor: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
     currency: z.literal("NGN"),
@@ -65,7 +65,7 @@ export const cmsSchema = z.discriminatedUnion("kind", [
     seo_title: z.string().max(200),
     seo_description: z.string().max(500),
     published: z.boolean(),
-    content: z.record(z.string().max(2000)),
+    content: z.record(z.string(), z.string().max(2000)),
   }),
   z.object({
     kind: z.literal("faqs"),

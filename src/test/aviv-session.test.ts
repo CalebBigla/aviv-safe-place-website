@@ -67,7 +67,9 @@ describe("media encryption key", () => {
   it("is shared within a room, different between rooms and hides the certificate", async () => {
     const first = await deriveMediaKey(config.certificate, channel);
     expect(await deriveMediaKey(config.certificate, channel)).toEqual(first);
-    expect(first.secret).toMatch(/^[a-f0-9]{64}$/);
+    // A secret over 62 bytes can't be encrypted by the SDK, and every join then fails.
+    expect(first.secret.length).toBeLessThanOrEqual(62);
+    expect(atob(first.secret)).toHaveLength(32);
     expect(first.salt).toMatch(/^[a-f0-9]{64}$/);
     expect(first.secret).not.toBe(first.salt);
     expect((await deriveMediaKey(config.certificate, `aviv-${"d".repeat(32)}`)).secret).not.toBe(

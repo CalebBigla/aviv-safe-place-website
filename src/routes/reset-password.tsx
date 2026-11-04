@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { TwoFactor, twoFactorStep } from "@/components/aviv-mfa";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { pageHead } from "@/lib/aviv/metadata";
@@ -15,6 +16,12 @@ function ResetPassword() {
   const [notice, setNotice] = useState("");
   const [done, setDone] = useState(false);
   const [busy, setBusy] = useState(false);
+  // Supabase requires the second step before an account with two-factor can change its password.
+  const [needsCode, setNeedsCode] = useState(false);
+  useEffect(() => {
+    if (!recovery) return;
+    void twoFactorStep().then((step) => setNeedsCode(step === "challenge"));
+  }, [recovery]);
   useEffect(() => {
     // Detect recovery / invite type from both the URL hash (implicit flow) and
     // the URL search params (PKCE flow), then fall back to the onAuthStateChange
@@ -39,6 +46,8 @@ function ResetPassword() {
             <Link to="/admin/login">Continue to sign in</Link>
           </Button>
         </div>
+      ) : recovery && needsCode ? (
+        <TwoFactor step="challenge" onVerified={() => setNeedsCode(false)} />
       ) : recovery ? (
         <form
           className="space-y-5"

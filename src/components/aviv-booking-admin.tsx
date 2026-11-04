@@ -9,6 +9,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Flag,
+  Mail,
   Plus,
   RefreshCw,
   Trash2,
@@ -32,6 +33,7 @@ import {
   listAdminBookings,
   listBookingBlocks,
   removeBookingBlock,
+  resendConfirmationEmail,
 } from "@/lib/aviv/booking-admin.functions";
 import {
   bookingStatuses,
@@ -251,7 +253,7 @@ const actions = {
   confirm: {
     title: "Confirm appointment",
     description:
-      "Confirm a time in Africa/Lagos. Choosing a different time moves the appointment and revokes any existing session access; meeting details must be prepared again.",
+      "Confirm a time in Africa/Lagos. The client is emailed their video link. Choosing a different time moves the appointment, stops earlier links from working and emails a new one.",
     icon: CalendarDays,
   },
   propose: {
@@ -280,6 +282,18 @@ const actions = {
   },
 } as const;
 type Action = keyof typeof actions;
+
+const confirmationNotices = {
+  sent: "Appointment confirmed. The client has been emailed their video link.",
+  failed:
+    "Appointment confirmed, but the email could not be sent. Use Send confirmation email to try again.",
+  not_configured: "Appointment confirmed. Email isn't set up yet, so no email was sent.",
+};
+const resendNotices = {
+  sent: "Confirmation email sent with a new video link.",
+  failed: "The email could not be sent. Please try again shortly.",
+  not_configured: "Email isn't set up yet, so no email was sent.",
+};
 
 // Reflects the room's hours for convenience; the server decides whether the room is open.
 function SessionEntry({ id, start, end }: { id: string; start: string; end: string }) {
@@ -313,6 +327,8 @@ function SessionEntry({ id, start, end }: { id: string; start: string; end: stri
 export function BookingDetail({ id }: { id: string }) {
   const read = useServerFn(getAdminBooking);
   const act = useServerFn(actOnBooking);
+  const resend = useServerFn(resendConfirmationEmail);
+  const [resending, setResending] = useState(false);
   const qc = useQueryClient();
   const { data, error, isPending, refetch } = useQuery({
     queryKey: ["aviv-booking", id],
@@ -443,9 +459,32 @@ export function BookingDetail({ id }: { id: string }) {
           </p>
         )}
         <p className="text-sm text-muted-foreground leading-relaxed">
-          Confirmation emails are not connected yet. Clients enter from their private booking link,
-          so share appointment details with them directly.
+          Confirming an appointment emails the client their video link. Moving or cancelling it
+          stops any earlier link from working.
         </p>
+        {b.booking_status === "confirmed" && b.confirmed_end && (
+          <Button
+            variant="outline"
+            className="mt-4"
+            disabled={resending || !paid}
+            onClick={async () => {
+              setResending(true);
+              setNotice("");
+              try {
+                const result = await resend({ data: { id: b.id } });
+                setNotice(resendNotices[result.email]);
+                await qc.invalidateQueries({ queryKey: ["aviv-booking", id] });
+              } catch {
+                setNotice(resendNotices.failed);
+              } finally {
+                setResending(false);
+              }
+            }}
+          >
+            <Mail />
+            {resending ? "Sending…" : "Send confirmation email"}
+          </Button>
+        )}
       </section>
       <section className="mt-9">
         <h2 className="text-2xl mb-5">Appointment history</h2>
@@ -487,7 +526,7 @@ export function BookingDetail({ id }: { id: string }) {
                 setBusy(true);
                 setFailure("");
                 try {
-                  await act({
+                  const result = await act({
                     data: {
                       id: b.id,
                       action,
@@ -501,7 +540,11 @@ export function BookingDetail({ id }: { id: string }) {
                     qc.invalidateQueries({ queryKey: ["aviv-admin-content"] }),
                   ]);
                   setAction(null);
-                  setNotice("Appointment updated. No email was sent.");
+                  setNotice(
+                    result.email
+                      ? confirmationNotices[result.email]
+                      : "Appointment updated. No email was sent.",
+                  );
                 } catch (err) {
                   setFailure(err instanceof Error ? err.message : "Could not update appointment.");
                 } finally {

@@ -35,15 +35,17 @@ export type Sql = postgres.Sql;
 export type Role = "anon" | "authenticated" | "service_role";
 
 // Runs fn inside a transaction as the given API role, with auth.uid() = userId.
+// Signed-in users have completed two-factor unless aal says otherwise.
 export function asRole<T>(
   sql: Sql,
   role: Role,
   userId: string | null,
   fn: (tx: Sql) => Promise<T>,
+  aal: "aal1" | "aal2" = "aal2",
 ) {
   return sql.begin(async (tx) => {
     await tx.unsafe(`SET LOCAL ROLE ${role}`);
-    await tx`SELECT set_config('request.jwt.claims', ${JSON.stringify(userId ? { sub: userId } : {})}, true)`;
+    await tx`SELECT set_config('request.jwt.claims', ${JSON.stringify(userId ? { sub: userId, aal } : {})}, true)`;
     return fn(tx as unknown as Sql);
   }) as Promise<T>;
 }

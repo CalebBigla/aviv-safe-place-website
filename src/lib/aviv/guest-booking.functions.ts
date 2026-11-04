@@ -13,8 +13,13 @@ import {
 import { publicClient } from "./public-client";
 import { isScheduledSlot, isSessionDuration, lagosDateKey } from "./schedule";
 import { clientKey, randomToken, serviceClient, sha256Hex } from "./request.server";
+import { passesBotCheck } from "./turnstile.server";
+
+// The calendar makes a request per month viewed, so this comfortably covers real visitors.
+const AVAILABILITY_LIMIT_PER_HOUR = 120;
 
 const failureMessages: Record<BookingFailure, string> = {
+  verification: "Please complete the security check and try again.",
   unavailable: "That time is no longer available. Please choose another time.",
   past: "That time has already passed. Please choose another time.",
   outside_schedule: "Please choose one of the available times shown.",
@@ -62,7 +67,19 @@ export const getGuestAvailability = createServerFn({ method: "POST" })
     }
     const duration = service.data?.duration_minutes;
     if (!isSessionDuration(duration)) return { ok: false, reason: "service" };
-    const slots = await client.rpc("aviv_slot_availability", {
+    let db;
+    try {
+      db = await serviceClient();
+    } catch {
+      return { ok: false, reason: "unavailable" };
+    }
+    const limit = await db.rpc("aviv_consume_rate_limit", {
+      _bucket: `availability:${await clientKey()}`,
+      _limit: AVAILABILITY_LIMIT_PER_HOUR,
+      _window_seconds: 3600,
+    });
+    if (limit.error || !limit.data) return { ok: false, reason: "unavailable" };
+    const slots = await db.rpc("aviv_slot_availability", {
       _from: data.from,
       _to: data.to,
       _minutes: duration,
@@ -100,6 +117,7 @@ export const submitGuestBooking = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<GuestBookingResult> => {
     setResponseHeader("Cache-Control", "no-store");
     if (data.website) return fail("invalid");
+    if (!(await passesBotCheck(data.turnstileToken))) return fail("verification");
     const start = new Date(data.start);
     if (!isScheduledSlot(start, 30) && !isScheduledSlot(start, 60)) return fail("outside_schedule");
     let db;

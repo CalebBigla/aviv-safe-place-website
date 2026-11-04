@@ -9,4 +9,5 @@ export const contactSchema = z.object({
     .min(1, "Please enter a message.")
     .max(2000, "Please keep your message under 2,000 characters."),
   website: z.string().max(200),
+  turnstileToken: z.string().max(2048).optional(),
 });

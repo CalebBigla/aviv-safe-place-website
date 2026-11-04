@@ -21,9 +21,10 @@ export const guestBookingSchema = z.object({
     .regex(/^(\+?[\d\s()-]{7,30})?$/, "Please enter a valid phone number or leave it blank.")
     .default(""),
   policyAccepted: z.literal(true, {
-    errorMap: () => ({ message: "Please confirm you have read the booking policies." }),
+    error: "Please confirm you have read the booking policies.",
   }),
   website: z.string().max(100).default(""),
+  turnstileToken: z.string().max(2048).optional(),
 });
 
 // Manage tokens are 32 random bytes, hex encoded (256 bits).
@@ -50,6 +51,7 @@ export type BookingFailure =
   | "invalid"
   | "too_many_holds"
   | "rate_limited"
+  | "verification"
   | "infrastructure";
 
 export type GuestBookingResult =

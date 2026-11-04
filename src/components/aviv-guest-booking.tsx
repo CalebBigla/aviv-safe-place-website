@@ -21,6 +21,7 @@ import {
   lagosDateKey,
   openDaysFrom,
 } from "@/lib/aviv/schedule";
+import { BotCheck, botCheckEnabled } from "@/components/aviv-turnstile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -729,6 +730,8 @@ function ReviewStep({
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
+  const [botToken, setBotToken] = useState("");
+  const [botAttempt, setBotAttempt] = useState(0);
   const end = new Date(new Date(start).getTime() + Number(service.duration_minutes) * 60000);
   return (
     <form
@@ -738,9 +741,18 @@ function ReviewStep({
         setNotice("");
         try {
           const result = await submit({
-            data: { serviceSlug: service.slug, start, ...details, policyAccepted: true, website: "" },
+            data: {
+              serviceSlug: service.slug,
+              start,
+              ...details,
+              policyAccepted: true,
+              website: "",
+              turnstileToken: botToken,
+            },
           });
           if (result.created) return onHeld(result);
+          // Tokens are single use, so a failed attempt needs a new one.
+          setBotAttempt((attempt) => attempt + 1);
           if (["unavailable", "past", "outside_schedule"].includes(result.reason)) {
             await queryClient.invalidateQueries({ queryKey: ["aviv-availability"] });
             return onSlotLost(result.message);
@@ -776,10 +788,14 @@ function ReviewStep({
         <p>
           Online payment is not available yet; no payment will be taken. Your appointment is only confirmed by AVIV after payment.
         </p>
+        <p>
+          Once AVIV confirms, your private video link will be sent to {details.email}.
+        </p>
       </div>
+      <BotCheck onToken={setBotToken} resetKey={botAttempt} />
       {notice && <p role="alert" className="mt-6 text-destructive text-sm">{notice}</p>}
       <StepActions onBack={onBack}>
-        <Button type="submit" disabled={busy}>
+        <Button type="submit" disabled={busy || (botCheckEnabled && !botToken)}>
           {busy ? "Holding your time…" : "Hold this time"}
         </Button>
       </StepActions>
@@ -821,7 +837,7 @@ function HeldConfirmation({
       <div className="mt-8 space-y-4">
         <h4 className="text-xl">Your private booking link</h4>
         <p className="text-sm leading-relaxed text-muted-foreground">
-          Save this link somewhere safe. It's the only way to view your booking. Anyone with the link can see your booking status.
+          Use this link to check your booking status. You don't need it for your session: once AVIV confirms your appointment, your video link will be emailed to you. Anyone with this link can see your booking status, so please keep it private.
         </p>
         <Input
           readOnly

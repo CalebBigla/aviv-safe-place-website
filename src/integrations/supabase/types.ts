@@ -567,6 +567,14 @@ export type Database = {
         Args: { _bucket: string; _limit: number; _window_seconds: number }
         Returns: boolean
       }
+      aviv_admin_confirmation_link: {
+        Args: { _id: string; _session_hash: string }
+        Returns: Json
+      }
+      aviv_admin_record_confirmation_email: {
+        Args: { _id: string; _sent: boolean }
+        Returns: undefined
+      }
       aviv_admin_session_access: { Args: { _id: string }; Returns: Json }
       aviv_issue_session_link: {
         Args: { _client_key: string; _manage_hash: string; _session_hash: string }

@@ -38,3 +38,6 @@ dist-ssr
 
 # Claude Code machine-local settings
 .claude/settings.local.json
+
+# Vercel
+.vercel

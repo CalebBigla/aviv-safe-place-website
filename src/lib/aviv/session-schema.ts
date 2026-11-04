@@ -15,8 +15,8 @@ export interface SessionJoin {
   channel: string;
   uid: number;
   token: string;
-  // Media is encrypted between the participants' browsers with this key, which is derived on
-  // our server and given only to authorised participants. Salt is hex encoded.
+  // Per-room media encryption key, derived on our server. The SDK also shares it with Agora, so this
+  // protects media in transit but is not end-to-end encryption. Salt is hex encoded.
   secret: string;
   salt: string;
 }
