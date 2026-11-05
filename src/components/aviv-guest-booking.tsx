@@ -21,6 +21,7 @@ import {
   lagosDateKey,
   openDaysFrom,
 } from "@/lib/aviv/schedule";
+import { PayButton } from "@/components/aviv-payment";
 import { BotCheck, botCheckEnabled } from "@/components/aviv-turnstile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -783,10 +784,10 @@ function ReviewStep({
       </dl>
       <div className="mt-6 space-y-3 text-sm leading-relaxed text-muted-foreground">
         <p>
-          When you continue, we'll hold this time for 30 minutes and give you a private link to your booking.
+          When you continue, we'll hold this time for 30 minutes while you pay securely with Paystack, and give you a private link to your booking.
         </p>
         <p>
-          Online payment is not available yet; no payment will be taken. Your appointment is only confirmed by AVIV after payment.
+          AVIV confirms your appointment after payment.
         </p>
         <p>
           Once AVIV confirms, your private video link will be sent to {details.email}.
@@ -834,7 +835,10 @@ function HeldConfirmation({
         <dt>Fee</dt>
         <dd>{formatNaira(service.price_minor)}</dd>
       </dl>
-      <div className="mt-8 space-y-4">
+      <div className="mt-8">
+        <PayButton token={held.token} label={`Pay ${formatNaira(service.price_minor)} now`} />
+      </div>
+      <div className="mt-10 space-y-4">
         <h4 className="text-xl">Your private booking link</h4>
         <p className="text-sm leading-relaxed text-muted-foreground">
           Use this link to check your booking status. You don't need it for your session: once AVIV confirms your appointment, your video link will be emailed to you. Anyone with this link can see your booking status, so please keep it private.
@@ -858,14 +862,14 @@ function HeldConfirmation({
           >
             {copied ? <Check /> : <Copy />} {copied ? "Link copied" : "Copy link"}
           </Button>
-          <Button asChild>
+          <Button variant="outline" asChild>
             <a href={path}>View my booking <ArrowUpRight /></a>
           </Button>
         </div>
         <p role="status" className="sr-only">{copied ? "Link copied" : ""}</p>
       </div>
       <p className="text-sm mt-8 leading-relaxed text-muted-foreground">
-        No payment has been taken. This hold will end at {formatLagosTime(held.holdExpiresAt)} unless payment is completed.
+        No payment has been taken yet. This hold ends at {formatLagosTime(held.holdExpiresAt)} unless payment is completed; you can also pay later from your booking link while the time is held.
       </p>
     </section>
   );

@@ -34,6 +34,7 @@ import { Route as AuthenticatedAdminMediaRouteImport } from './routes/_authentic
 import { Route as AuthenticatedAdminPagesRouteImport } from './routes/_authenticated/admin/pages'
 import { Route as AuthenticatedAdminServicesRouteImport } from './routes/_authenticated/admin/services'
 import { Route as AuthenticatedAdminSettingsRouteImport } from './routes/_authenticated/admin/settings'
+import { Route as ApiPaystackWebhookRouteImport } from './routes/api.paystack.webhook'
 import { Route as BookingManageTokenRouteImport } from './routes/booking.manage.$token'
 import { Route as AuthenticatedAdminBookingsIndexRouteImport } from './routes/_authenticated/admin/bookings.index'
 import { Route as AuthenticatedAdminBookingsIdRouteImport } from './routes/_authenticated/admin/bookings.$id'
@@ -167,6 +168,11 @@ const AuthenticatedAdminSettingsRoute =
     path: '/settings',
     getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
+const ApiPaystackWebhookRoute = ApiPaystackWebhookRouteImport.update({
+  id: '/api/paystack/webhook',
+  path: '/api/paystack/webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const BookingManageTokenRoute = BookingManageTokenRouteImport.update({
   id: '/booking/manage/$token',
   path: '/booking/manage/$token',
@@ -215,6 +221,7 @@ export interface FileRoutesByFullPath {
   '/admin/pages': typeof AuthenticatedAdminPagesRoute
   '/admin/services': typeof AuthenticatedAdminServicesRoute
   '/admin/settings': typeof AuthenticatedAdminSettingsRoute
+  '/api/paystack/webhook': typeof ApiPaystackWebhookRoute
   '/booking/manage/$token': typeof BookingManageTokenRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/admin/bookings/$id': typeof AuthenticatedAdminBookingsIdRoute
@@ -243,6 +250,7 @@ export interface FileRoutesByTo {
   '/admin/pages': typeof AuthenticatedAdminPagesRoute
   '/admin/services': typeof AuthenticatedAdminServicesRoute
   '/admin/settings': typeof AuthenticatedAdminSettingsRoute
+  '/api/paystack/webhook': typeof ApiPaystackWebhookRoute
   '/booking/manage/$token': typeof BookingManageTokenRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/admin/bookings/$id': typeof AuthenticatedAdminBookingsIdRoute
@@ -275,6 +283,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/pages': typeof AuthenticatedAdminPagesRoute
   '/_authenticated/admin/services': typeof AuthenticatedAdminServicesRoute
   '/_authenticated/admin/settings': typeof AuthenticatedAdminSettingsRoute
+  '/api/paystack/webhook': typeof ApiPaystackWebhookRoute
   '/booking/manage/$token': typeof BookingManageTokenRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/admin/bookings/$id': typeof AuthenticatedAdminBookingsIdRoute
@@ -307,6 +316,7 @@ export interface FileRouteTypes {
     | '/admin/pages'
     | '/admin/services'
     | '/admin/settings'
+    | '/api/paystack/webhook'
     | '/booking/manage/$token'
     | '/admin/'
     | '/admin/bookings/$id'
@@ -335,6 +345,7 @@ export interface FileRouteTypes {
     | '/admin/pages'
     | '/admin/services'
     | '/admin/settings'
+    | '/api/paystack/webhook'
     | '/booking/manage/$token'
     | '/admin'
     | '/admin/bookings/$id'
@@ -366,6 +377,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/pages'
     | '/_authenticated/admin/services'
     | '/_authenticated/admin/settings'
+    | '/api/paystack/webhook'
     | '/booking/manage/$token'
     | '/_authenticated/admin/'
     | '/_authenticated/admin/bookings/$id'
@@ -391,6 +403,7 @@ export interface RootRouteChildren {
   BookingSuccessRoute: typeof BookingSuccessRoute
   MediaIdRoute: typeof MediaIdRoute
   SessionTokenRoute: typeof SessionTokenRoute
+  ApiPaystackWebhookRoute: typeof ApiPaystackWebhookRoute
   BookingManageTokenRoute: typeof BookingManageTokenRoute
 }
 
@@ -571,6 +584,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminSettingsRouteImport
       parentRoute: typeof AuthenticatedAdminRouteRoute
     }
+    '/api/paystack/webhook': {
+      id: '/api/paystack/webhook'
+      path: '/api/paystack/webhook'
+      fullPath: '/api/paystack/webhook'
+      preLoaderRoute: typeof ApiPaystackWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/booking/manage/$token': {
       id: '/booking/manage/$token'
       path: '/booking/manage/$token'
@@ -676,6 +696,7 @@ const rootRouteChildren: RootRouteChildren = {
   BookingSuccessRoute: BookingSuccessRoute,
   MediaIdRoute: MediaIdRoute,
   SessionTokenRoute: SessionTokenRoute,
+  ApiPaystackWebhookRoute: ApiPaystackWebhookRoute,
   BookingManageTokenRoute: BookingManageTokenRoute,
 }
 export const routeTree = rootRouteImport

@@ -576,6 +576,14 @@ export type Database = {
         Returns: undefined
       }
       aviv_admin_session_access: { Args: { _id: string }; Returns: Json }
+      aviv_begin_payment: {
+        Args: { _client_key: string; _manage_hash: string; _reference: string }
+        Returns: Json
+      }
+      aviv_record_payment: {
+        Args: { _amount_minor: number; _currency: string; _details: Json; _reference: string }
+        Returns: Json
+      }
       aviv_issue_session_link: {
         Args: { _client_key: string; _manage_hash: string; _session_hash: string }
         Returns: Json

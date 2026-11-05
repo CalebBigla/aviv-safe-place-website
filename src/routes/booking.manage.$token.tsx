@@ -3,6 +3,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { Video } from "lucide-react";
+import { PayButton } from "@/components/aviv-payment";
 import { Unavailable } from "@/components/aviv-site";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -30,12 +31,13 @@ function describe(b: GuestBookingDetails): { title: string; detail: string } {
     return {
       title: `Held until ${b.hold_expires_at ? formatLagosTime(b.hold_expires_at) : "shortly"}`,
       detail:
-        "Your time is held while payment is completed. Online payment is not available yet, so no payment has been taken; if payment isn't completed the hold ends and the time is released.",
+        "Your time is held while you pay. If payment isn't completed, the hold ends and the time is released.",
     };
   if (b.booking_status === "pending")
     return {
       title: "Awaiting AVIV confirmation",
-      detail: "Payment has been received. AVIV will confirm your appointment.",
+      detail:
+        "Payment has been received. AVIV will confirm your appointment and email your video link to you.",
     };
   if (b.booking_status === "confirmed")
     return { title: "Confirmed", detail: "Your appointment is confirmed." };
@@ -175,6 +177,11 @@ function Entry() {
       </dl>
       {b.booking_status === "confirmed" && b.confirmed_start && b.confirmed_end && (
         <SessionEntry token={token} start={b.confirmed_start} end={b.confirmed_end} />
+      )}
+      {b.booking_status === "pending" && b.payment_status !== "successful" && (
+        <div className="mt-8">
+          <PayButton token={token} label={`Pay ${formatNaira(b.price_minor)} now`} />
+        </div>
       )}
       <p className="mt-6 text-sm text-muted-foreground">
         All times are in Lagos time (WAT, UTC+1). Keep this link private.

@@ -16,8 +16,8 @@ The original product brief is kept in [docs/product-brief.md](docs/product-brief
 |---|---|
 | Public pages, CMS, administrator sign-in | Working |
 | Availability, slot holds, guest booking links | Working (requires migration `0008`, see below) |
-| Paystack payments | **Not integrated.** No payment is taken and nothing is ever marked paid. |
-| Agora video sessions | Built (requires migrations `0011`, `0012` and Agora credentials, see below). Confirmed appointments need a verified payment, so clients can't reach a room until Paystack is connected. |
+| Paystack payments | Built (requires migration `0014`, `PAYSTACK_SECRET_KEY` and the webhook URL, see below). |
+| Agora video sessions | Built (requires migrations `0011`, `0012` and Agora credentials, see below). |
 | Confirmation email | Built on Resend (requires `RESEND_API_KEY` and `EMAIL_FROM`). Only confirmations are emailed; contact enquiries are stored for administrators. |
 | Bot check | Built on Cloudflare Turnstile (requires `VITE_TURNSTILE_SITE_KEY` and `TURNSTILE_SECRET_KEY`). |
 
@@ -28,7 +28,7 @@ The original product brief is kept in [docs/product-brief.md](docs/product-brief
 - **Authority:** the database decides (`public.aviv_slot_valid`, `public.aviv_slot_availability`). `src/lib/aviv/schedule.ts` mirrors the same rules for display only.
 - **Holds:** choosing a time creates a 30-minute hold, a `pending` booking with `bookings.slot` set. An exclusion constraint makes overlapping claims impossible, including under concurrent requests. Lapsed holds become `expired` inside the next scheduling transaction, so no cron job is needed.
 - **Closures:** administrators close periods under **Admin → Availability**. A closure can't overlap an existing booking or hold.
-- **Lifecycle:** `pending` (hold) → *(verified payment, future phase)* → `pending` + `successful` (awaiting AVIV) → `confirmed` → `completed`. Other states are `reschedule_requested`, `cancelled` and `expired`. Only paid bookings appear in the administration queue. Admin actions run in a transactional database function with optimistic locking, the schedule, closures and the booking's own duration snapshot.
+- **Lifecycle:** `pending` (hold) → *(payment verified with Paystack)* → `pending` + `successful` (awaiting AVIV) → `confirmed` → `completed`. Other states are `reschedule_requested`, `cancelled` and `expired`. Only paid bookings appear in the administration queue. Admin actions run in a transactional database function with optimistic locking, the schedule, closures and the booking's own duration snapshot.
 - **Snapshots:** price, service title and duration are copied onto the booking and cannot change afterwards.
 
 ## Guest booking links
@@ -51,6 +51,13 @@ Each confirmed, paid appointment gets one private room with two seats, one for t
 - **Privacy:** room names are random and no names or emails are sent to Agora. Media is encrypted in transit with a per-room key (`aes-256-gcm2`) derived on the server. The SDK shares that key with Agora, so this is not end-to-end encryption that excludes Agora. Recording is not enabled.
 
 To enable it, create an Agora project **with the App Certificate enabled**, then set `AGORA_APP_ID` and `AGORA_APP_CERTIFICATE` as server-only values. Camera and microphone access need HTTPS (or `localhost`).
+
+## Payments (Paystack)
+
+- **Checkout:** "Pay now" on the "time held" page or the booking link starts a Paystack hosted checkout from the server, for the booking's saved price. Starting checkout extends the hold to 15 minutes from then, but never beyond 45 minutes after the booking was made.
+- **Verification:** a booking is only marked paid after the server asks Paystack's API whether the payment succeeded. Both the return page (`/booking/success`) and the signed webhook (`/api/paystack/webhook`) do this, and each payment is applied once however often it is reported.
+- **Edge cases:** a payment after the hold lapsed keeps the time if it's still free; otherwise the booking is marked paid but expired and flagged for refund review. A second payment for an already-paid booking is flagged for refund review. A wrong amount or currency is never applied. Refunds are made in the Paystack dashboard.
+- **Setup:** set `PAYSTACK_SECRET_KEY` (`sk_test_…` while testing, `sk_live_…` for real payments), and in Paystack → Settings → API Keys & Webhooks set the webhook URL to `https://<your-site>/api/paystack/webhook`, separately for test and live mode.
 
 ## Confirmation email
 

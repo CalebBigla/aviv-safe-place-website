@@ -822,6 +822,124 @@ suite("AVIV booking database", () => {
     });
   });
 
+  describe("Paystack payments", () => {
+    let clientCount = 0;
+    // A Saturday a week after the lifecycle tests, so these holds never collide with them.
+    const day = async () =>
+      (await sql`SELECT (${sat2}::date + 7)::text AS d`)[0]!["d"] as string;
+    const hold = async (time: string) => {
+      const manage = rawToken();
+      const held = await createHold(
+        "session-30",
+        at(await day(), time),
+        `payer${++clientCount}@example.org`,
+        sha256(manage),
+      );
+      return { manage, ...held, booking: await bookingByReference(held.reference) };
+    };
+    const newReference = () => `AVIVPAY-${randomBytes(16).toString("hex")}`;
+    const begin = (manage: string, reference = newReference()) =>
+      asRole(sql, "service_role", null, (tx) =>
+        tx`SELECT public.aviv_begin_payment(${sha256(manage)}, ${reference}, ${`ip:pay${++clientCount}`}) AS r`.then(
+          ([row]) => ({ reference, result: row?.["r"] as Record<string, unknown> }),
+        ),
+      );
+    const record = (reference: string, amount: number, currency = "NGN") =>
+      asRole(sql, "service_role", null, (tx) =>
+        tx`SELECT public.aviv_record_payment(${reference}, ${amount}, ${currency}, ${sql.json({ channel: "card" })}) AS r`.then(
+          ([row]) => row?.["r"] as Record<string, unknown>,
+        ),
+      );
+    const price = 1500000;
+
+    it("starts checkout only for a live hold, at the booking's own price", async () => {
+      expect((await begin(rawToken())).result).toEqual({ state: "unavailable" });
+      const { manage, booking } = await hold("10:00");
+      const { result } = await begin(manage);
+      expect(result["state"]).toBe("ready");
+      expect(result["amount_minor"]).toBe(price);
+      expect(result["currency"]).toBe("NGN");
+      expect(result["email"]).toMatch(/^payer\d+@example\.org$/);
+      expect(await failure(begin(manage, "AVIV-not-a-reference"))).toBe("AVIV_INVALID_DETAILS");
+      // Checkout extends the hold, but never past 45 minutes from the original request.
+      const extended = await bookingByReference(booking["public_reference"]);
+      const limit = new Date(booking["created_at"]).getTime() + 45 * 60000;
+      expect(new Date(extended["request_expires_at"]).getTime()).toBeLessThanOrEqual(limit);
+      expect(new Date(extended["request_expires_at"]).getTime()).toBeGreaterThan(Date.now() + 14 * 60000);
+    });
+    it("marks the booking paid once, however many times the payment is reported", async () => {
+      const { manage, reference: bookingRef } = await hold("10:30");
+      const { reference } = await begin(manage);
+      expect(await record(reference, price)).toEqual({ state: "paid", reference: bookingRef });
+      expect(await record(reference, price)).toEqual({ state: "paid", reference: bookingRef });
+      const paid = await bookingByReference(bookingRef);
+      expect(paid["payment_status"]).toBe("successful");
+      expect(paid["booking_status"]).toBe("pending");
+      expect(paid["payment_reference"]).toBe(reference);
+      expect(paid["slot"]).not.toBeNull();
+      const events =
+        await sql`SELECT count(*)::int n FROM public.payment_events WHERE paystack_reference=${reference} AND event_type='charge.success'`;
+      expect(events[0]!["n"]).toBe(1);
+      expect((await begin(manage)).result).toEqual({ state: "paid" });
+    });
+    it("never accepts the wrong amount or currency", async () => {
+      const { manage, reference: bookingRef } = await hold("11:00");
+      const short = await begin(manage);
+      expect((await record(short.reference, price - 1))["state"]).toBe("mismatch");
+      const dollars = await begin(manage);
+      expect((await record(dollars.reference, price, "USD"))["state"]).toBe("mismatch");
+      expect((await bookingByReference(bookingRef))["payment_status"]).toBe("pending");
+    });
+    it("flags a second payment for the same booking for refund review", async () => {
+      const { manage, reference: bookingRef } = await hold("11:30");
+      const first = await begin(manage);
+      await record(first.reference, price);
+      // A second checkout that was already open in another tab.
+      const second = `AVIVPAY-${randomBytes(16).toString("hex")}`;
+      await sql`INSERT INTO public.payment_events(booking_id,paystack_reference,event_type,processing_status,idempotency_key)
+        SELECT id, ${second}, 'initialize', 'processed', ${`initialize:${second}`} FROM public.bookings WHERE public_reference=${bookingRef}`;
+      expect((await record(second, price))["state"]).toBe("duplicate");
+      const row = await bookingByReference(bookingRef);
+      expect(row["refund_status"]).toBe("review_required");
+      expect(row["payment_reference"]).toBe(first.reference);
+    });
+    it("keeps the time for a late payment if it is still free", async () => {
+      const { manage, reference: bookingRef } = await hold("12:00");
+      const { reference } = await begin(manage);
+      await sql`UPDATE public.bookings SET request_expires_at=now()-interval '1 second' WHERE public_reference=${bookingRef}`;
+      expect((await record(reference, price))["state"]).toBe("paid");
+      const row = await bookingByReference(bookingRef);
+      expect(row["booking_status"]).toBe("pending");
+      expect(row["payment_status"]).toBe("successful");
+      expect(row["slot"]).not.toBeNull();
+    });
+    it("flags a late payment for refund review if someone else has taken the time", async () => {
+      const { manage, reference: bookingRef } = await hold("12:30");
+      const { reference } = await begin(manage);
+      await sql`UPDATE public.bookings SET request_expires_at=now()-interval '1 second' WHERE public_reference=${bookingRef}`;
+      await hold("12:30");
+      expect((await record(reference, price))["state"]).toBe("late");
+      const row = await bookingByReference(bookingRef);
+      expect(row["booking_status"]).toBe("expired");
+      expect(row["payment_status"]).toBe("successful");
+      expect(row["refund_status"]).toBe("review_required");
+      expect(row["slot"]).toBeNull();
+    });
+    it("ignores references this site never issued", async () => {
+      expect(await record(newReference(), price)).toEqual({ state: "unknown" });
+    });
+    it("can't be called from the browser", async () => {
+      for (const role of ["anon", "authenticated"] as const)
+        for (const call of [
+          `SELECT public.aviv_begin_payment('${"a".repeat(64)}','AVIVPAY-${"a".repeat(32)}','k')`,
+          `SELECT public.aviv_record_payment('AVIVPAY-${"a".repeat(32)}',1,'NGN','{}'::jsonb)`,
+        ])
+          expect(await failure(asRole(sql, role, member, (tx) => tx.unsafe(call)))).toMatch(
+            /permission denied/,
+          );
+    });
+  });
+
   describe("rate limiting", () => {
     it("counts within a window and prunes stale buckets", async () => {
       await sql`INSERT INTO public.rate_limit_buckets(key,window_start,attempts) VALUES ('stale',now()-interval '2 days',99)`;

@@ -215,7 +215,7 @@ export function BookingTable({
               <p className="empty-state">
                 {filters.search || filters.status !== "all" || filters.payment !== "all"
                   ? "No bookings match these filters."
-                  : "No paid bookings yet. Online payment is not connected, so bookings will appear here once it is."}
+                  : "No paid bookings yet. Bookings appear here once Paystack payment is verified."}
               </p>
             )}
             <div className="flex justify-between items-center mt-6">
@@ -410,6 +410,7 @@ export function BookingDetail({ id }: { id: string }) {
             b.duration_minutes_snapshot ? `${b.duration_minutes_snapshot} minutes` : "—",
           ],
           ["Price snapshot", formatNaira(b.price_minor)],
+          ["Paystack reference", b.payment_reference ?? "—"],
           ["Requested time", time(b.requested_start)],
           ["Alternative time", time(b.alternative_start)],
           ["Confirmed start", time(b.confirmed_start)],
