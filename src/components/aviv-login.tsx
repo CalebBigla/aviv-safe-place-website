@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { getAdminIdentity } from "@/lib/aviv/admin.functions";
+import { ADMIN_TWO_FACTOR_REQUIRED } from "@/lib/aviv/admin-policy";
 import { Wordmark } from "./aviv-site";
 import { TwoFactor, twoFactorStep, type TwoFactorStep } from "./aviv-mfa";
 
@@ -26,7 +27,7 @@ export function AdminLogin() {
     if (!data.session) return;
     verifyingRef.current = true;
     try {
-      const step = await twoFactorStep();
+      const step = ADMIN_TWO_FACTOR_REQUIRED ? await twoFactorStep() : null;
       setMfaStep(step);
       if (step) return;
       await verify();

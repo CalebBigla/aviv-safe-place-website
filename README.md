@@ -58,7 +58,7 @@ Set `RESEND_API_KEY` and `EMAIL_FROM` (a sender on a domain verified in Resend).
 
 ## Security
 
-- **Administrator two-factor:** every administrator needs an authenticator app. They set it up at their first sign-in, and the database refuses administrator rights without it (`public.has_role`). If someone loses their device, an owner removes the factor under Supabase → Authentication → Users, and they set up a new one at their next sign-in.
+- **Administrator two-factor:** **temporarily off for testing, so a password alone gives administrator access.** Restore it before real clients use the site: set `ADMIN_TWO_FACTOR_REQUIRED` to true in `src/lib/aviv/admin-policy.ts` and restore the check in `public.has_role` (see migration `0013`). When on, administrators set up an authenticator app at first sign-in, and the database refuses administrator rights without it. If someone loses their device, an owner removes the factor under Supabase → Authentication → Users.
 - **Public sign-up:** must be disabled under Supabase → Authentication → Sign In / Providers. The site has no sign-up form, but the Supabase API accepts sign-ups unless this is off. Create administrators by invitation from the dashboard.
 - **Rate limits:** keyed on a hash of the Vercel-supplied client address. Holds, availability, the contact form and guest links all have limits, and availability and the contact form can only be reached through the server.
 - **Headers:** `src/lib/aviv/security-headers.ts` sets the content security policy, framing, referrer and camera/microphone rules, and `no-store` on private pages.
@@ -68,8 +68,7 @@ Set `RESEND_API_KEY` and `EMAIL_FROM` (a sender on a domain verified in Resend).
 1. Import the GitHub repository. `vercel.json` sets the build. No other build settings are needed.
 2. Add the environment variables from `.env.example`. Use separate values for Preview deployments, or none, rather than production keys.
 3. Deploy, then add the site's URL to Supabase → Authentication → URL Configuration so password reset emails work.
-4. Apply migrations with `npm run db:migrate`. **Do this after the code is live:** migration `0012` makes the database require two-factor and server-only calls, which earlier code doesn't support.
-5. Sign in at `/admin/login` straight away and set up two-factor.
+4. Apply migrations with `npm run db:migrate`. **On a fresh deployment, do this after the code is live**, because migration `0012` requires server-only calls that earlier code doesn't support.
 
 ## Local setup
 

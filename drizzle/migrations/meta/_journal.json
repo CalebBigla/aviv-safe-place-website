@@ -92,6 +92,13 @@
       "when": 1791935300000,
       "tag": "0012_aviv_security_hardening_and_confirmation_links",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1791935400000,
+      "tag": "0013_aviv_pause_admin_two_factor",
+      "breakpoints": true
     }
   ]
 }

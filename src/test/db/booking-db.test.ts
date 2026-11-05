@@ -442,7 +442,27 @@ suite("AVIV booking database", () => {
       );
       expect(contact[0]!["r"]).toEqual({ ok: true });
     });
-    it("gives administrators no rights without two-factor, even with the right password", async () => {
+    // Two-factor is paused for testing (migration 0013). Remove this test and un-skip the next
+    // one when it is restored.
+    it("gives administrators their rights with a password alone while two-factor is paused", async () => {
+      const role = await asRole(
+        sql,
+        "authenticated",
+        admin,
+        (tx) => tx`SELECT public.has_role(${admin}::uuid,'admin') AS ok`,
+        "aal1",
+      );
+      expect(role[0]!["ok"]).toBe(true);
+      const nonAdmin = await asRole(
+        sql,
+        "authenticated",
+        member,
+        (tx) => tx`SELECT public.has_role(${member}::uuid,'admin') AS ok`,
+        "aal1",
+      );
+      expect(nonAdmin[0]!["ok"]).toBe(false);
+    });
+    it.skip("gives administrators no rights without two-factor, even with the right password", async () => {
       const hold = await createHold("session-30", at(sat2, "11:30"));
       const paid = await markPaid(hold.reference);
       const withoutCode = <T>(fn: (tx: Sql) => Promise<T>) =>
