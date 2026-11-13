@@ -14,7 +14,8 @@
     "db:migrate": "drizzle-kit migrate",
     "test": "vitest run",
     "test:db": "vitest run src/test/db",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "start": "node .output/server/index.mjs"
   },
   "overrides": {
     "rolldown": "1.2.1"

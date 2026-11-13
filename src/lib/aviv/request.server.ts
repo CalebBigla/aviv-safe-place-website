@@ -1,19 +1,34 @@
-import { getRequestHeader } from "@tanstack/react-start/server";
+import { getRequest, getRequestHeader } from "@tanstack/react-start/server";
+import { siteOrigin } from "./metadata";
 
 export const sha256Hex = async (value: string) =>
   Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value))))
     .map((v) => v.toString(16).padStart(2, "0"))
     .join("");
 
-// The caller's address, read only from headers Vercel sets itself. Vercel overwrites these on
-// every request; other headers such as cf-connecting-ip reach us unchanged and could be faked to
-// get a fresh rate limit on each attempt, so they must not be trusted here.
+// The caller's address, read only from what the host's own proxy sets, because anything else can
+// be faked to get a fresh rate limit on each attempt.
+// - Vercel overwrites x-vercel-forwarded-for. Elsewhere a visitor can send that header, so it is
+//   trusted only when running on Vercel.
+// - Render appends the address it saw to x-forwarded-for but keeps whatever the visitor sent in
+//   front, so only the last entry is trustworthy.
+// cf-connecting-ip and similar are never trusted.
 export function clientAddress() {
-  const forwarded =
-    getRequestHeader("x-vercel-forwarded-for") ??
-    getRequestHeader("x-forwarded-for") ??
-    getRequestHeader("x-real-ip");
-  return (forwarded?.split(",")[0] ?? "").trim().slice(0, 64);
+  const vercel = process.env["VERCEL"] ? getRequestHeader("x-vercel-forwarded-for") : undefined;
+  const address = vercel
+    ? vercel.split(",")[0]
+    : getRequestHeader("x-forwarded-for")?.split(",").at(-1);
+  return (address ?? "").trim().slice(0, 64);
+}
+
+// The site's public address for links in emails and the Paystack return URL. Behind a proxy the
+// request itself can carry an internal address or plain http, so the configured URL comes first.
+export function publicOrigin() {
+  return (
+    siteOrigin ??
+    process.env["RENDER_EXTERNAL_URL"]?.replace(/\/+$/, "") ??
+    new URL(getRequest().url).origin
+  );
 }
 
 // Rate-limit key for the calling client. Only a hash is stored, never the address itself.

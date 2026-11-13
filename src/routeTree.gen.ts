@@ -24,6 +24,7 @@ import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as AuthenticatedAdminRouteRouteImport } from './routes/_authenticated/admin/route'
 import { Route as AdminLoginRouteImport } from './routes/admin.login'
+import { Route as ApiHealthRouteImport } from './routes/api.health'
 import { Route as BookingSuccessRouteImport } from './routes/booking.success'
 import { Route as MediaIdRouteImport } from './routes/media.$id'
 import { Route as SessionTokenRouteImport } from './routes/session.$token'
@@ -112,6 +113,11 @@ const AuthenticatedAdminRouteRoute = AuthenticatedAdminRouteRouteImport.update({
 const AdminLoginRoute = AdminLoginRouteImport.update({
   id: '/admin/login',
   path: '/admin/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiHealthRoute = ApiHealthRouteImport.update({
+  id: '/api/health',
+  path: '/api/health',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BookingSuccessRoute = BookingSuccessRouteImport.update({
@@ -212,6 +218,7 @@ export interface FileRoutesByFullPath {
   '/terms': typeof TermsRoute
   '/admin': typeof AuthenticatedAdminRouteRouteWithChildren
   '/admin/login': typeof AdminLoginRoute
+  '/api/health': typeof ApiHealthRoute
   '/booking/success': typeof BookingSuccessRoute
   '/media/$id': typeof MediaIdRoute
   '/session/$token': typeof SessionTokenRoute
@@ -242,6 +249,7 @@ export interface FileRoutesByTo {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
   '/admin/login': typeof AdminLoginRoute
+  '/api/health': typeof ApiHealthRoute
   '/booking/success': typeof BookingSuccessRoute
   '/media/$id': typeof MediaIdRoute
   '/session/$token': typeof SessionTokenRoute
@@ -274,6 +282,7 @@ export interface FileRoutesById {
   '/terms': typeof TermsRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteRouteWithChildren
   '/admin/login': typeof AdminLoginRoute
+  '/api/health': typeof ApiHealthRoute
   '/booking/success': typeof BookingSuccessRoute
   '/media/$id': typeof MediaIdRoute
   '/session/$token': typeof SessionTokenRoute
@@ -307,6 +316,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/admin'
     | '/admin/login'
+    | '/api/health'
     | '/booking/success'
     | '/media/$id'
     | '/session/$token'
@@ -337,6 +347,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/terms'
     | '/admin/login'
+    | '/api/health'
     | '/booking/success'
     | '/media/$id'
     | '/session/$token'
@@ -368,6 +379,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/_authenticated/admin'
     | '/admin/login'
+    | '/api/health'
     | '/booking/success'
     | '/media/$id'
     | '/session/$token'
@@ -400,6 +412,7 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TermsRoute: typeof TermsRoute
   AdminLoginRoute: typeof AdminLoginRoute
+  ApiHealthRoute: typeof ApiHealthRoute
   BookingSuccessRoute: typeof BookingSuccessRoute
   MediaIdRoute: typeof MediaIdRoute
   SessionTokenRoute: typeof SessionTokenRoute
@@ -512,6 +525,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/login'
       fullPath: '/admin/login'
       preLoaderRoute: typeof AdminLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/health': {
+      id: '/api/health'
+      path: '/api/health'
+      fullPath: '/api/health'
+      preLoaderRoute: typeof ApiHealthRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/booking/success': {
@@ -693,6 +713,7 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TermsRoute: TermsRoute,
   AdminLoginRoute: AdminLoginRoute,
+  ApiHealthRoute: ApiHealthRoute,
   BookingSuccessRoute: BookingSuccessRoute,
   MediaIdRoute: MediaIdRoute,
   SessionTokenRoute: SessionTokenRoute,

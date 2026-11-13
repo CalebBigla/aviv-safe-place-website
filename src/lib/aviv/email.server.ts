@@ -1,8 +1,6 @@
-import { getRequest } from "@tanstack/react-start/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
-import { siteOrigin } from "./metadata";
-import { randomToken, sha256Hex } from "./request.server";
+import { publicOrigin, randomToken, sha256Hex } from "./request.server";
 import { formatLagosDateTime, formatLagosTime } from "./schedule";
 import { SESSION_EARLY_ENTRY_MINUTES } from "./session-schema";
 
@@ -128,7 +126,7 @@ export async function sendConfirmationEmail(
     console.error("[aviv-email] link could not be created", link.error?.code);
     return "failed";
   }
-  const origin = siteOrigin ?? new URL(getRequest().url).origin;
+  const origin = publicOrigin();
   const sent = await send(
     config,
     String(booking["email"]),

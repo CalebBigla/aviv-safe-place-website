@@ -14,7 +14,9 @@ export default defineConfig({
       },
       server: { entry: "server" },
     }),
-    nitro({ preset: "vercel" }),
+    // No fixed preset: Nitro detects the host when building (Render or Vercel) and otherwise
+    // builds a standard Node server in .output, started with `npm start`.
+    nitro(),
     react(),
   ],
   resolve: {

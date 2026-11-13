@@ -1,14 +1,13 @@
 import { createServerFn } from "@tanstack/react-start";
-import { getRequest, setResponseHeader } from "@tanstack/react-start/server";
+import { setResponseHeader } from "@tanstack/react-start/server";
 import { guestTokenSchema } from "./guest-booking-schema";
-import { siteOrigin } from "./metadata";
 import {
   paymentReferenceSchema,
   type PaymentCheckResult,
   type PaymentStartResult,
 } from "./payment-schema";
 import { initializeTransaction, paystackKey, settlePayment } from "./paystack.server";
-import { clientKey, randomToken, serviceClient, sha256Hex } from "./request.server";
+import { clientKey, publicOrigin, randomToken, serviceClient, sha256Hex } from "./request.server";
 
 const CHECK_LIMIT_PER_HOUR = 60;
 
@@ -44,7 +43,7 @@ export const startGuestPayment = createServerFn({ method: "POST" })
         ? { status: state }
         : { status: "unavailable" };
     }
-    const origin = siteOrigin ?? new URL(getRequest().url).origin;
+    const origin = publicOrigin();
     const url = await initializeTransaction(key, {
       email: String(hold["email"]),
       amountMinor: Number(hold["amount_minor"]),

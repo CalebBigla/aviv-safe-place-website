@@ -5,7 +5,7 @@ and a protected administration area.
 
 - **App:** React 19 + TanStack Start (SSR, file-based routes, server functions), TanStack Query, Tailwind/shadcn.
 - **Data:** Supabase PostgreSQL (RLS), Supabase Auth (administrators only), Supabase Storage (private `aviv-media` bucket).
-- **Hosting:** Vercel via Nitro (`npm run build` produces `.vercel/output`).
+- **Hosting:** Render via Nitro (`render.yaml`; `npm run build` then `npm start`). Nitro detects the host when building, so Vercel also still works.
 - **Server code:** TanStack server functions and server routes. Supabase Edge Functions are not used.
 
 The original product brief is kept in [docs/product-brief.md](docs/product-brief.md).
@@ -67,8 +67,17 @@ Set `RESEND_API_KEY` and `EMAIL_FROM` (a sender on a domain verified in Resend).
 
 - **Administrator two-factor:** **temporarily off for testing, so a password alone gives administrator access.** Restore it before real clients use the site: set `ADMIN_TWO_FACTOR_REQUIRED` to true in `src/lib/aviv/admin-policy.ts` and restore the check in `public.has_role` (see migration `0013`). When on, administrators set up an authenticator app at first sign-in, and the database refuses administrator rights without it. If someone loses their device, an owner removes the factor under Supabase → Authentication → Users.
 - **Public sign-up:** must be disabled under Supabase → Authentication → Sign In / Providers. The site has no sign-up form, but the Supabase API accepts sign-ups unless this is off. Create administrators by invitation from the dashboard.
-- **Rate limits:** keyed on a hash of the Vercel-supplied client address. Holds, availability, the contact form and guest links all have limits, and availability and the contact form can only be reached through the server.
+- **Rate limits:** keyed on a hash of the client address the host's own proxy supplies: Vercel's header on Vercel, and the last `X-Forwarded-For` entry elsewhere (Render appends the real address after anything the visitor sent). Holds, availability, the contact form and guest links all have limits, and availability and the contact form can only be reached through the server.
 - **Headers:** `src/lib/aviv/security-headers.ts` sets the content security policy, framing, referrer and camera/microphone rules, and `no-store` on private pages.
+
+## Deploying to Render
+
+1. In Render, choose **New → Blueprint**, select this GitHub repository, and Render reads `render.yaml`.
+2. Enter the environment variables it asks for, using the same values as `.env`. Set `VITE_SITE_URL` to the site's address (for example `https://aviv-safe-place.onrender.com`, or your own domain).
+3. After the first deploy, add the site's address to Supabase → Authentication → URL Configuration, and set Paystack's webhook URL to `https://<site>/api/paystack/webhook`.
+4. Apply migrations with `npm run db:migrate`.
+
+**Free plan:** the service sleeps after 15 minutes without traffic and takes up to a minute to wake. To keep it awake while testing, have an external monitor such as UptimeRobot or cron-job.org request `https://<site>/api/health` every 10 minutes. It has to be external, since a sleeping service can't wake itself. Keep only **one** free service awake: a whole month uses about 744 of the 750 free hours, and running out suspends every free service until the next month. Switch the plan to **Starter** before real clients use the site.
 
 ## Deploying to Vercel
 

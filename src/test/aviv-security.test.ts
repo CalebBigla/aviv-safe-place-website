@@ -14,20 +14,31 @@ vi.mock("@tanstack/react-start/server", () => ({
 
 describe("client address for rate limits", () => {
   beforeEach(() => requestHeaders.clear());
+  afterEach(() => vi.unstubAllEnvs());
 
-  it("ignores headers a visitor could fake", async () => {
+  it("on Vercel, uses Vercel's header and ignores ones a visitor could fake", async () => {
+    vi.stubEnv("VERCEL", "1");
     requestHeaders.set("x-vercel-forwarded-for", "203.0.113.7");
     const genuine = await clientKey();
     requestHeaders.set("cf-connecting-ip", "198.51.100.1");
+    requestHeaders.set("x-forwarded-for", "198.51.100.2");
     expect(await clientKey()).toBe(genuine);
     expect(clientAddress()).toBe("203.0.113.7");
   });
-  it("uses the first address when there are several", () => {
-    requestHeaders.set("x-forwarded-for", "203.0.113.7, 10.0.0.1");
+  it("elsewhere, trusts only the address the host's proxy appended last", () => {
+    vi.stubEnv("VERCEL", "");
+    // A visitor sent a fake address; Render appended the real one after it.
+    requestHeaders.set("x-forwarded-for", "198.51.100.66, 203.0.113.7");
+    expect(clientAddress()).toBe("203.0.113.7");
+  });
+  it("ignores a faked Vercel header when not running on Vercel", () => {
+    vi.stubEnv("VERCEL", "");
+    requestHeaders.set("x-vercel-forwarded-for", "198.51.100.66");
+    requestHeaders.set("x-forwarded-for", "203.0.113.7");
     expect(clientAddress()).toBe("203.0.113.7");
   });
   it("never stores the address itself", async () => {
-    requestHeaders.set("x-vercel-forwarded-for", "203.0.113.7");
+    requestHeaders.set("x-forwarded-for", "203.0.113.7");
     expect(await clientKey()).not.toContain("203.0.113.7");
   });
   it("makes clients with no address share one bucket", async () => {
