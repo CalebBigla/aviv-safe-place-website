@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useRouterState } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { ArrowUpRight, Menu, Heart, Sprout, Users } from "lucide-react";
@@ -89,7 +89,29 @@ export function Header() {
           </div>
         </header>
       </div>
+      <MobileBookBar />
     </>
+  );
+}
+
+// Pages where the bar would compete with the page's own booking or session controls.
+const QUIET_PATHS = ["/book", "/booking", "/session", "/reset-password"];
+
+// On phones, a gentle "Book a Session" bar rises in once the visitor has scrolled past the opening,
+// so booking is always one tap away. It is inert while hidden, so it is never focusable unseen.
+function MobileBookBar() {
+  const path = useRouterState({ select: (state) => state.location.pathname });
+  const scrolled = useScrolled(520);
+  if (QUIET_PATHS.some((quiet) => path.startsWith(quiet))) return null;
+  return (
+    <div className="mobile-book-bar" data-visible={scrolled} inert={!scrolled}>
+      <span>Ready when you are.</span>
+      <Button variant="hero" size="sm" className="h-10 px-5" asChild>
+        <Link to="/book">
+          Book a Session <ArrowUpRight />
+        </Link>
+      </Button>
+    </div>
   );
 }
 export function Footer() {

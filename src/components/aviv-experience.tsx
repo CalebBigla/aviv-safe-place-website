@@ -34,7 +34,7 @@ const revealTargets = [
   ".service-item",
   ".values > div",
   ".steps > div",
-  ".faq-list",
+  ".faq-list > details",
   ".cta-inner",
   ".contact-grid form",
 ]

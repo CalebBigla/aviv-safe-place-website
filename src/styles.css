@@ -26,9 +26,9 @@
   --color-destructive-foreground: var(--primary-foreground);
   --color-blush: var(--blush);
   --color-mint: var(--mint);
-  --radius-lg: 6px;
-  --radius-md: 4px;
-  --radius-sm: 2px;
+  --radius-lg: 14px;
+  --radius-md: 10px;
+  --radius-sm: 6px;
 }
 :root {
   --background: oklch(0.955 0.012 85);
@@ -43,6 +43,11 @@
   --accent: oklch(0.9 0.022 170);
   --border: oklch(0.84 0.019 190);
   --destructive: oklch(0.5 0.17 25);
+  /* A lifted, warmer white for cards and fields, so surfaces sit softly on the cream page. */
+  --surface: oklch(0.985 0.007 85);
+  --shadow-soft: 0 1px 2px oklch(0.3 0.03 60 / 0.04), 0 8px 28px -14px oklch(0.3 0.035 211 / 0.18);
+  --shadow-lift: 0 2px 6px oklch(0.3 0.03 60 / 0.05), 0 24px 48px -22px oklch(0.3 0.035 211 / 0.32);
+  --ease-calm: cubic-bezier(0.22, 1, 0.36, 1);
   --hero-shade: linear-gradient(
     90deg,
     oklch(0.22 0.029 211 / 0.68),
@@ -60,8 +65,10 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
-  font-size: 15px;
+  font-size: 16px;
+  line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 h1,
 h2,
@@ -69,6 +76,11 @@ h3 {
   font-family: var(--font-display);
   font-weight: 400;
   line-height: 1.12;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+}
+p {
+  text-wrap: pretty;
 }
 a {
   text-decoration: none;
@@ -1200,4 +1212,213 @@ textarea {
     transition: none !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* ── Calm refinement ───────────────────────────────────────────────
+   An upgrade of the existing look rather than a new one: more breathing room, softer surfaces,
+   pill-shaped actions and slower, gentler motion, so the site feels unhurried and cared for. */
+html { scroll-behavior: smooth; }
+::selection { background: color-mix(in oklch, var(--blush) 75%, transparent); color: var(--foreground); }
+a:focus-visible,
+summary:focus-visible,
+[role="tab"]:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 4px;
+  border-radius: 6px;
+}
+
+/* Rhythm and hierarchy */
+.section { padding-block: clamp(72px, 9vw, 128px); }
+.section-title { font-size: clamp(34px, 3.7vw, 50px); line-height: 1.08; }
+.section-copy { font-size: 17px; line-height: 1.85; }
+.eyebrow { color: color-mix(in oklch, currentColor 78%, transparent); }
+.section-head { margin-bottom: clamp(32px, 4vw, 52px); }
+.page-heading {
+  position: relative;
+  border-bottom: 0;
+  padding-top: clamp(60px, 8vw, 112px);
+  padding-bottom: clamp(44px, 5vw, 72px);
+}
+.page-heading:after {
+  content: "";
+  position: absolute;
+  left: 48px;
+  right: 48px;
+  bottom: 0;
+  height: 1px;
+  background: linear-gradient(90deg, var(--border), transparent 85%);
+}
+.page-heading h1 { font-size: clamp(40px, 5.4vw, 68px); letter-spacing: -0.02em; }
+section.bg-muted {
+  background: linear-gradient(180deg, var(--muted), color-mix(in oklch, var(--muted) 55%, var(--background)));
+}
+
+/* Header */
+.site-header-bar[data-scrolled="true"] { backdrop-filter: blur(14px) saturate(1.2); }
+.nav-links { gap: 36px; font-size: 14px; }
+.nav-links a { color: var(--muted-foreground); transition: color .25s ease; }
+.nav-links a:hover,
+.nav-links a[data-status="active"] { color: var(--foreground); }
+.nav-links a:after { background: var(--blush); height: 2px; border-radius: 2px; }
+
+/* Hero */
+.welcome-scene h1 { font-size: clamp(54px, 6.4vw, 84px); letter-spacing: -0.02em; }
+.hero p { font-size: 17px; max-width: 430px; }
+.hero-actions { gap: 16px; margin-top: 38px; }
+.hero-button, .hero-outline { padding-inline: 28px; }
+
+/* Actions: soft pills */
+.aviv-button { border-radius: 999px; letter-spacing: 0.01em; }
+.aviv-button.bg-primary:not(:disabled):hover { background: color-mix(in oklch, var(--primary) 90%, var(--blush)); }
+.hero-outline { backdrop-filter: blur(6px); }
+
+/* Surfaces */
+.service-item {
+  border-radius: 22px;
+  background: var(--surface);
+  border-color: color-mix(in oklch, var(--border) 70%, transparent);
+  padding: 34px 30px 30px;
+  box-shadow: var(--shadow-soft);
+  transition: transform .6s var(--ease-calm), box-shadow .6s ease, border-color .4s ease;
+}
+.care-image-frame,
+.steps-image,
+.support-image img { border-radius: 22px; }
+.session-card { border-radius: 18px; background: var(--surface); }
+.date-trigger,
+.selected-slot-card { border-radius: 16px; }
+.calendar-day { border-radius: 10px; }
+.cal-day-status, .cal-error { border-radius: 12px; }
+.video-stage { border-radius: 22px; }
+
+/* What guides us: gentle tiles */
+.values { gap: 24px; padding-top: 24px; }
+.values > div {
+  padding: 34px 30px;
+  border-radius: 22px;
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
+  transition: transform .6s var(--ease-calm), box-shadow .6s ease;
+}
+
+/* How it works: numbered markers joined by a fading line */
+.steps > div { position: relative; }
+.step-number {
+  display: inline-grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--border), var(--shadow-soft);
+  font-size: 13px;
+  font-weight: 500;
+  transition: background-color .4s ease, color .4s ease, box-shadow .4s ease;
+}
+.step-number:after { display: none; }
+@media (min-width: 768px) {
+  .steps > div:not(:last-child):before {
+    content: "";
+    position: absolute;
+    top: 23px;
+    left: 60px;
+    right: -22px;
+    height: 1px;
+    background: linear-gradient(90deg, var(--border), transparent);
+  }
+}
+
+/* Questions: quiet cards that open smoothly */
+.faq-list { display: grid; gap: 12px; }
+.faq-list details {
+  border: 1px solid color-mix(in oklch, var(--border) 75%, transparent);
+  border-radius: 18px;
+  padding: 22px 26px;
+  background: var(--surface);
+  transition: border-color .35s ease, box-shadow .35s ease;
+}
+.faq-list details[open] {
+  border-color: color-mix(in oklch, var(--primary) 22%, var(--border));
+  box-shadow: var(--shadow-soft);
+}
+.faq-list summary { font-size: 17px; font-weight: 500; }
+.faq-list details p { margin-bottom: 0; }
+
+/* Closing invitation: a floating panel with a soft blush glow */
+.cta-band {
+  width: calc(100% - 96px);
+  max-width: 1144px;
+  margin: 0 auto clamp(56px, 7vw, 96px);
+  border-radius: 32px;
+  padding-block: clamp(56px, 7vw, 92px);
+  background:
+    radial-gradient(70% 110% at 100% 0%, color-mix(in oklch, var(--blush) 16%, transparent) 0%, transparent 65%),
+    var(--primary);
+  box-shadow: var(--shadow-lift);
+}
+.cta-band h2 { font-size: clamp(32px, 3.6vw, 46px); }
+
+/* Forms */
+.form-field { font-weight: 500; }
+.form-field input,
+.form-field textarea {
+  background: var(--surface);
+  border-color: color-mix(in oklch, var(--border) 85%, transparent);
+  border-radius: 14px;
+  padding: 14px 16px;
+  font-weight: 400;
+}
+.form-field textarea { min-height: 140px; resize: vertical; }
+.choice span { border-radius: 999px; background: var(--surface); }
+.admin-select { border-radius: 12px; }
+
+/* Footer */
+.footer-links a { color: var(--muted-foreground); }
+.footer-links a:hover { color: var(--foreground); }
+
+/* Phones: a calm "Book a Session" bar appears once the visitor has scrolled past the opening. */
+.mobile-book-bar {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: calc(14px + env(safe-area-inset-bottom));
+  z-index: 45;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 8px 8px 20px;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--primary) 94%, transparent);
+  color: var(--primary-foreground);
+  backdrop-filter: blur(12px);
+  box-shadow: var(--shadow-lift);
+  font-size: 14px;
+  opacity: 0;
+  transform: translateY(140%);
+  pointer-events: none;
+  transition: transform .6s var(--ease-calm), opacity .35s ease;
+}
+.mobile-book-bar[data-visible="true"] { opacity: 1; transform: none; pointer-events: auto; }
+@media (min-width: 768px) { .mobile-book-bar { display: none; } }
+
+@media (hover: hover) and (pointer: fine) {
+  .service-item:hover { transform: translateY(-6px); box-shadow: var(--shadow-lift); }
+  .values > div:hover { transform: translateY(-4px); box-shadow: var(--shadow-lift); }
+  .steps > div:hover .step-number { background: var(--primary); color: var(--primary-foreground); }
+  .faq-list details:not([open]):hover { border-color: color-mix(in oklch, var(--primary) 30%, var(--border)); }
+  .faq-list details summary:hover { padding-left: 0; }
+}
+
+@media (max-width: 767px) {
+  .page-heading:after { left: 24px; right: 24px; }
+  .section-copy { font-size: 16px; }
+  .cta-band { width: calc(100% - 32px); border-radius: 26px; }
+  .faq-list details { padding: 18px 20px; }
+  .values > div { padding: 28px 24px; }
+  .steps { gap: 32px 20px; }
+  /* Room for the booking bar, so it never covers the last links. */
+  .footer { padding-bottom: 104px; }
 }

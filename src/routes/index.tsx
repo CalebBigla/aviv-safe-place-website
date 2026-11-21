@@ -257,26 +257,26 @@ function Index() {
           <p className="section-copy mb-10">
             {copy(
               "approach_description",
-              "Our booking experience keeps care personal. No client account needed; appointments are confirmed by AVIV.",
+              "Booking takes a few minutes and needs no account. Your appointment is confirmed as soon as you pay.",
             )}
           </p>
           <div className="steps">
             {[
               {
                 title: "Choose your support",
-                text: "Explore the published services and find the support you'd like to request.",
+                text: "Explore our services and choose the support that feels right for you.",
               },
               {
-                title: "Share your details",
-                text: "Provide the essential contact details needed for your booking.",
+                title: "Pick a time",
+                text: "Choose a day and time that suits you, and share a few contact details.",
               },
               {
-                title: "Payment & confirmation",
-                text: "Payment will be verified securely. AVIV then confirms your appointment.",
+                title: "Pay securely",
+                text: "Pay safely with Paystack. Your appointment is confirmed straight away.",
               },
               {
                 title: "Make space for you",
-                text: "Once confirmed, receive your appointment details and secure session access.",
+                text: "Your private video link and a calendar invite arrive by email.",
               },
             ].map((s, i) => (
               <div key={s.title}>
