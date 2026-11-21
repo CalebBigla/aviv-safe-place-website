@@ -35,12 +35,15 @@ function describe(b: GuestBookingDetails): { title: string; detail: string } {
     };
   if (b.booking_status === "pending")
     return {
-      title: "Awaiting AVIV confirmation",
+      title: "Payment received",
       detail:
-        "Payment has been received. AVIV will confirm your appointment and email your video link to you.",
+        "Payment has been received. AVIV will be in touch about your appointment and email your video link to you.",
     };
   if (b.booking_status === "confirmed")
-    return { title: "Confirmed", detail: "Your appointment is confirmed." };
+    return {
+      title: "Confirmed",
+      detail: "Your appointment is confirmed. Your private video link has been emailed to you.",
+    };
   if (b.booking_status === "reschedule_requested")
     return {
       title: "A new time is being arranged",

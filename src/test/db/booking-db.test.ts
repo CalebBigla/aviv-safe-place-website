@@ -825,8 +825,7 @@ suite("AVIV booking database", () => {
   describe("Paystack payments", () => {
     let clientCount = 0;
     // A Saturday a week after the lifecycle tests, so these holds never collide with them.
-    const day = async () =>
-      (await sql`SELECT (${sat2}::date + 7)::text AS d`)[0]!["d"] as string;
+    const day = async () => (await sql`SELECT (${sat2}::date + 7)::text AS d`)[0]!["d"] as string;
     const hold = async (time: string) => {
       const manage = rawToken();
       const held = await createHold(
@@ -865,18 +864,35 @@ suite("AVIV booking database", () => {
       const extended = await bookingByReference(booking["public_reference"]);
       const limit = new Date(booking["created_at"]).getTime() + 45 * 60000;
       expect(new Date(extended["request_expires_at"]).getTime()).toBeLessThanOrEqual(limit);
-      expect(new Date(extended["request_expires_at"]).getTime()).toBeGreaterThan(Date.now() + 14 * 60000);
+      expect(new Date(extended["request_expires_at"]).getTime()).toBeGreaterThan(
+        Date.now() + 14 * 60000,
+      );
     });
-    it("marks the booking paid once, however many times the payment is reported", async () => {
-      const { manage, reference: bookingRef } = await hold("10:30");
+    it("confirms the held time once, however many times the payment is reported", async () => {
+      const { manage, reference: bookingRef, booking } = await hold("10:30");
       const { reference } = await begin(manage);
-      expect(await record(reference, price)).toEqual({ state: "paid", reference: bookingRef });
-      expect(await record(reference, price)).toEqual({ state: "paid", reference: bookingRef });
+      expect(await record(reference, price)).toEqual({
+        state: "paid",
+        reference: bookingRef,
+        first: true,
+        confirmed: true,
+      });
+      // Only the first report sends the confirmation email.
+      expect(await record(reference, price)).toEqual({
+        state: "paid",
+        reference: bookingRef,
+        first: false,
+        confirmed: true,
+      });
       const paid = await bookingByReference(bookingRef);
       expect(paid["payment_status"]).toBe("successful");
-      expect(paid["booking_status"]).toBe("pending");
+      expect(paid["booking_status"]).toBe("confirmed");
       expect(paid["payment_reference"]).toBe(reference);
       expect(paid["slot"]).not.toBeNull();
+      expect(new Date(paid["confirmed_start"]).getTime()).toBe(
+        new Date(booking["requested_start"]).getTime(),
+      );
+      expect(paid["confirmed_at"]).not.toBeNull();
       const events =
         await sql`SELECT count(*)::int n FROM public.payment_events WHERE paystack_reference=${reference} AND event_type='charge.success'`;
       expect(events[0]!["n"]).toBe(1);
@@ -909,7 +925,7 @@ suite("AVIV booking database", () => {
       await sql`UPDATE public.bookings SET request_expires_at=now()-interval '1 second' WHERE public_reference=${bookingRef}`;
       expect((await record(reference, price))["state"]).toBe("paid");
       const row = await bookingByReference(bookingRef);
-      expect(row["booking_status"]).toBe("pending");
+      expect(row["booking_status"]).toBe("confirmed");
       expect(row["payment_status"]).toBe("successful");
       expect(row["slot"]).not.toBeNull();
     });
@@ -925,6 +941,42 @@ suite("AVIV booking database", () => {
       expect(row["refund_status"]).toBe("review_required");
       expect(row["slot"]).toBeNull();
     });
+    it("leaves a paid time that has already started for an administrator", async () => {
+      const { manage, reference: bookingRef } = await hold("13:00");
+      const { reference } = await begin(manage);
+      await sql`UPDATE public.bookings SET slot=tstzrange(now()-interval '1 minute',now()+interval '29 minutes') WHERE public_reference=${bookingRef}`;
+      expect(await record(reference, price)).toMatchObject({ state: "paid", confirmed: false });
+      expect((await bookingByReference(bookingRef))["booking_status"]).toBe("pending");
+    });
+    it("issues the emailed session link only for a payment-confirmed appointment", async () => {
+      const link = (paymentReference: string, hash: string) =>
+        asRole(sql, "service_role", null, (tx) =>
+          tx`SELECT public.aviv_payment_confirmation_link(${paymentReference}, ${hash}) AS r`.then(
+            ([row]) => row?.["r"] as Record<string, unknown> | null,
+          ),
+        );
+      const { manage, reference: bookingRef } = await hold("14:00");
+      const { reference } = await begin(manage);
+      expect(await link(reference, sha256(rawToken()))).toBeNull();
+      await record(reference, price);
+      const session = rawToken();
+      const issued = await link(reference, sha256(session));
+      expect(issued).toMatchObject({ reference: bookingRef });
+      expect(String(issued?.["email"])).toMatch(/@example\.org$/);
+      const tokens =
+        await sql`SELECT count(*)::int n FROM public.booking_access_tokens WHERE token_hash=${sha256(session)} AND purpose='session'`;
+      expect(tokens[0]!["n"]).toBe(1);
+      expect(await failure(link(reference, "not-a-hash"))).toMatch(/Invalid session link/);
+      await asRole(
+        sql,
+        "service_role",
+        null,
+        (tx) => tx`SELECT public.aviv_record_payment_confirmation_email(${reference}, true)`,
+      );
+      const audit =
+        await sql`SELECT count(*)::int n FROM public.audit_logs WHERE action='confirmation_email_sent' AND resource_id=${String(issued?.["id"])}`;
+      expect(audit[0]!["n"]).toBe(1);
+    });
     it("ignores references this site never issued", async () => {
       expect(await record(newReference(), price)).toEqual({ state: "unknown" });
     });
@@ -933,6 +985,8 @@ suite("AVIV booking database", () => {
         for (const call of [
           `SELECT public.aviv_begin_payment('${"a".repeat(64)}','AVIVPAY-${"a".repeat(32)}','k')`,
           `SELECT public.aviv_record_payment('AVIVPAY-${"a".repeat(32)}',1,'NGN','{}'::jsonb)`,
+          `SELECT public.aviv_payment_confirmation_link('AVIVPAY-${"a".repeat(32)}','${"a".repeat(64)}')`,
+          `SELECT public.aviv_record_payment_confirmation_email('AVIVPAY-${"a".repeat(32)}',true)`,
         ])
           expect(await failure(asRole(sql, role, member, (tx) => tx.unsafe(call)))).toMatch(
             /permission denied/,

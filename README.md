@@ -28,7 +28,7 @@ The original product brief is kept in [docs/product-brief.md](docs/product-brief
 - **Authority:** the database decides (`public.aviv_slot_valid`, `public.aviv_slot_availability`). `src/lib/aviv/schedule.ts` mirrors the same rules for display only.
 - **Holds:** choosing a time creates a 30-minute hold, a `pending` booking with `bookings.slot` set. An exclusion constraint makes overlapping claims impossible, including under concurrent requests. Lapsed holds become `expired` inside the next scheduling transaction, so no cron job is needed.
 - **Closures:** administrators close periods under **Admin → Availability**. A closure can't overlap an existing booking or hold.
-- **Lifecycle:** `pending` (hold) → *(payment verified with Paystack)* → `pending` + `successful` (awaiting AVIV) → `confirmed` → `completed`. Other states are `reschedule_requested`, `cancelled` and `expired`. Only paid bookings appear in the administration queue. Admin actions run in a transactional database function with optimistic locking, the schedule, closures and the booking's own duration snapshot.
+- **Lifecycle:** `pending` (hold) → *(payment verified with Paystack)* → `confirmed` → `completed`. A verified payment confirms the held time straight away and emails the client their video link (migration `0015`); only a paid time that has already started is left `pending` for an administrator. Other states are `reschedule_requested`, `cancelled` and `expired`. Only paid bookings appear in the administration queue. Admin actions run in a transactional database function with optimistic locking, the schedule, closures and the booking's own duration snapshot.
 - **Snapshots:** price, service title and duration are copied onto the booking and cannot change afterwards.
 
 ## Guest booking links
@@ -61,7 +61,7 @@ To enable it, create an Agora project **with the App Certificate enabled**, then
 
 ## Confirmation email
 
-Set `RESEND_API_KEY` and `EMAIL_FROM` (a sender on a domain verified in Resend). The email carries the time and the video link, and deliberately leaves out the type of session, because inboxes are often shared or previewed. If sending fails the appointment stays confirmed, the administrator is told, and **Send confirmation email** on the booking page sends a new link. The audit log records only whether an email was sent.
+Set `RESEND_API_KEY` and `EMAIL_FROM` (a sender on a domain verified in Resend), and optionally `EMAIL_REPLY_TO`. The email is sent as soon as a verified payment confirms the appointment, once per payment, and again whenever an administrator confirms or moves a booking. It gives the date, time (Lagos), length, booking reference and video link, an **Add to Google Calendar** button and an attached `.ics` file for Apple Calendar and Outlook, plus preparation and privacy notes. It deliberately leaves out the type of session, including in the calendar entry, because inboxes and calendars are often shared or previewed. If sending fails the appointment stays confirmed, the administrator is told, and **Send confirmation email** on the booking page sends a new link. The audit log records only whether an email was sent.
 
 ## Security
 

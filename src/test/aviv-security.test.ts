@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { contactSchema } from "@/lib/aviv/contact-schema";
-import { confirmationEmail } from "@/lib/aviv/email.server";
+import { calendarInvite, confirmationEmail, googleCalendarUrl } from "@/lib/aviv/email.server";
 import { clientAddress, clientKey } from "@/lib/aviv/request.server";
 import { contentSecurityPolicy, securityHeaders } from "@/lib/aviv/security-headers";
 import { passesBotCheck } from "@/lib/aviv/turnstile.server";
@@ -120,13 +120,46 @@ describe("confirmation email", () => {
     start: "2027-03-15T09:00:00Z",
     end: "2027-03-15T10:00:00Z",
     joinUrl: "https://example.test/session/abc123",
+    reference: "AVIV-7K2Q",
+    siteUrl: "https://example.test",
+    canReply: true,
   };
-  it("gives the time in Lagos and the personal link", () => {
+  it("gives the date, time in Lagos, length, reference and personal link", () => {
     const email = confirmationEmail(details);
     expect(email.html).toContain("https://example.test/session/abc123");
     expect(email.text).toContain("https://example.test/session/abc123");
+    expect(email.text).toContain("Monday, 15 March 2027");
     expect(email.text).toContain("10:00");
     expect(email.text).toContain("Lagos time");
+    expect(email.text).toContain("60 minutes");
+    expect(email.text).toContain("AVIV-7K2Q");
+  });
+  it("offers a Google Calendar entry at the right UTC time", () => {
+    const url = new URL(googleCalendarUrl(details));
+    expect(url.hostname).toBe("calendar.google.com");
+    expect(url.searchParams.get("dates")).toBe("20270315T090000Z/20270315T100000Z");
+    expect(url.searchParams.get("details")).toContain("https://example.test/session/abc123");
+    expect(confirmationEmail(details).html).toContain("Add to Google Calendar");
+  });
+  it("attaches a valid calendar file that keeps one entry per booking", () => {
+    const ics = calendarInvite(details, new Date("2027-03-01T00:00:00Z"));
+    expect(ics).toContain("DTSTART:20270315T090000Z");
+    expect(ics).toContain("UID:AVIV-7K2Q@example.test");
+    expect(ics.split("\r\n").every((line) => new TextEncoder().encode(line).length <= 75)).toBe(
+      true,
+    );
+    const [attachment] = confirmationEmail(details).attachments;
+    expect(attachment?.filename).toBe("aviv-session.ics");
+    expect(Buffer.from(attachment!.content, "base64").toString()).toContain("BEGIN:VCALENDAR");
+  });
+  it("never names the type of session", () => {
+    const email = confirmationEmail(details);
+    expect(email.text.toLowerCase()).not.toMatch(/marriage|grief|trauma|family therapy/);
+  });
+  it("points to the contact page when replies aren't set up", () => {
+    expect(confirmationEmail({ ...details, canReply: false }).text).toContain(
+      "https://example.test/contact",
+    );
   });
   it("keeps the subject free of personal details", () => {
     const email = confirmationEmail(details);

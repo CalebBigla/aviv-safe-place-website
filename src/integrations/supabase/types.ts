@@ -584,6 +584,14 @@ export type Database = {
         Args: { _amount_minor: number; _currency: string; _details: Json; _reference: string }
         Returns: Json
       }
+      aviv_payment_confirmation_link: {
+        Args: { _reference: string; _session_hash: string }
+        Returns: Json
+      }
+      aviv_record_payment_confirmation_email: {
+        Args: { _reference: string; _sent: boolean }
+        Returns: undefined
+      }
       aviv_issue_session_link: {
         Args: { _client_key: string; _manage_hash: string; _session_hash: string }
         Returns: Json

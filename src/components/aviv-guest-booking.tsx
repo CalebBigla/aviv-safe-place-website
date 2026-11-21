@@ -410,7 +410,7 @@ function TimeStep({
           <DialogHeader className="pr-6 text-left">
             <DialogTitle>Choose a date &amp; time</DialogTitle>
             <DialogDescription className="text-xs">
-              Lagos time (WAT, UTC+1). AVIV confirms after payment.
+              Lagos time (WAT, UTC+1). Your appointment is confirmed as soon as you pay.
             </DialogDescription>
           </DialogHeader>
 
@@ -787,10 +787,7 @@ function ReviewStep({
           When you continue, we'll hold this time for 30 minutes while you pay securely with Paystack, and give you a private link to your booking.
         </p>
         <p>
-          AVIV confirms your appointment after payment.
-        </p>
-        <p>
-          Once AVIV confirms, your private video link will be sent to {details.email}.
+          Your appointment is confirmed as soon as payment is complete, and your private video link and a calendar invite will be emailed to {details.email}.
         </p>
       </div>
       <BotCheck onToken={setBotToken} resetKey={botAttempt} />
@@ -841,7 +838,7 @@ function HeldConfirmation({
       <div className="mt-10 space-y-4">
         <h4 className="text-xl">Your private booking link</h4>
         <p className="text-sm leading-relaxed text-muted-foreground">
-          Use this link to check your booking status. You don't need it for your session: once AVIV confirms your appointment, your video link will be emailed to you. Anyone with this link can see your booking status, so please keep it private.
+          Use this link to check your booking status. You don't need it for your session: once you've paid, your video link will be emailed to you. Anyone with this link can see your booking status, so please keep it private.
         </p>
         <Input
           readOnly

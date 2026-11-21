@@ -24,7 +24,7 @@ function Book() {
         <h1 className="booking-page-title">Make space for yourself.</h1>
         <p className="text-sm text-muted-foreground mt-3" style={{ maxWidth: 520 }}>
           No account needed. Sessions are Mon & Wed 10 AM – 1 PM and Sat 10 AM – 3 PM (Lagos time).
-          AVIV confirms every appointment.
+          Your appointment is confirmed as soon as you pay.
         </p>
       </div>
 

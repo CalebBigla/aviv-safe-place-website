@@ -12,10 +12,12 @@ export type PaymentStartResult =
         "paid" | "expired" | "unavailable" | "rate_limited" | "not_configured" | "infrastructure";
     };
 
-// paid: recorded; late: paid after the time had gone; duplicate: already paid; review: needs AVIV;
+// confirmed: paid and the appointment confirmed (the video link is emailed); paid: recorded but
+// left for AVIV, for example because the time has already started; late: paid after the time had gone; duplicate: already paid; review: needs AVIV;
 // not_paid: Paystack has no successful payment; unknown: not a reference this site issued.
 export type PaymentCheckResult = {
   status:
+    | "confirmed"
     | "paid"
     | "late"
     | "duplicate"

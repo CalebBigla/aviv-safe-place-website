@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
+import { sendPaymentConfirmationEmail } from "./email.server";
 import type { PaymentCheckResult } from "./payment-schema";
 
 const API = "https://api.paystack.co";
@@ -109,13 +110,20 @@ export async function settlePayment(
     console.error("[aviv-paystack] payment could not be recorded", result.error.code);
     return { status: "infrastructure" };
   }
-  const state =
+  const recorded =
     result.data && typeof result.data === "object" && !Array.isArray(result.data)
-      ? result.data["state"]
+      ? result.data
       : null;
+  const state = recorded?.["state"];
   if (state === "mismatch") {
     console.error("[aviv-paystack] amount or currency did not match the booking");
     return { status: "review" };
+  }
+  if (state === "paid" && recorded?.["confirmed"] === true) {
+    // Only the first report of a payment sends the email, so the webhook and the return page
+    // can't both send one. A failed email doesn't undo the confirmation.
+    if (recorded["first"] === true) await sendPaymentConfirmationEmail(db, reference);
+    return { status: "confirmed" };
   }
   return state === "paid" ||
     state === "late" ||

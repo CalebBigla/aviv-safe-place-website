@@ -27,10 +27,15 @@ const outcomes: Record<
   Exclude<PaymentCheckResult["status"], "unknown">,
   { title: string; description: string }
 > = {
+  confirmed: {
+    title: "You're booked. Your appointment is confirmed.",
+    description:
+      "Thank you. We've emailed your private video link and a calendar invite to you. If it isn't in your inbox within a few minutes, please check your spam folder.",
+  },
   paid: {
     title: "Payment received. Thank you.",
     description:
-      "AVIV will now confirm your appointment. When it's confirmed, your private video link will be emailed to you.",
+      "AVIV will be in touch about your appointment, and your private video link will be emailed to you.",
   },
   late: {
     title: "Your payment arrived after your hold ended",
@@ -104,7 +109,7 @@ function Entry() {
   const outcome = outcomes[data.status];
   return (
     <section className="site-wrap section max-w-2xl">
-      {data.status === "paid" && (
+      {(data.status === "confirmed" || data.status === "paid") && (
         <span className="held-check" aria-hidden="true">
           ✓
         </span>
